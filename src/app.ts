@@ -1,3 +1,4 @@
-import fastify from 'fastify'
+const a = 1;
+const b = 2;
 
-export const app = fastify()
+console.log(a + b);
