@@ -25,7 +25,7 @@ const produtoSchema = new Schema<ProdutoInterface>(
     ],
     preco: { type: Number, required: true, min: 0 },
   },
-  { timestamps: true },
+  { versionKey: false },
 );
 
 const Produto = model<ProdutoInterface>("Produto", produtoSchema);
