@@ -1,8 +1,8 @@
 {
-  "name": "usuarios-api-node",
+  "name": "multi-backend",
   "version": "1.0.0",
   "description": "Uma API em Node usando typescript.",
-  "main": "index.js",
+  "main": "server.ts",
   "scripts": {
     "start": "tsx server.ts",
     "start:dev": "tsx watch server.ts",
