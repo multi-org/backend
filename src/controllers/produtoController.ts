@@ -83,7 +83,7 @@ class ProdutoController {
       const produtoAtualizado = await produto.findByIdAndUpdate(
         id,
         { nome, descricao, categoria, disponibilidade, preco },
-        { new: true, runValidators: true }
+        { new: true, runValidators: true },
       );
 
       if (!produtoAtualizado) {
