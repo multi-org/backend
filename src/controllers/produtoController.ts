@@ -1,12 +1,13 @@
 import produto from "../models/Produto";
 import { Request, Response } from "express";
+import mongoose from "mongoose";
 
 class ProdutoController {
   static async listarProdutos(req: Request, res: Response) {
     try {
       const { nome } = req.query;
 
-      if (nome && typeof nome === "string" && nome.trim() === "") {
+      if (nome === "") {
         return res.status(400).json({ error: '"nome" não pode ser vazio!' });
       }
 
@@ -22,17 +23,44 @@ class ProdutoController {
     }
   }
 
-  static async listarProdutoPorNome(req: Request, res: Response) {
+  static async listarProdutoPorNomeOuId(req: Request, res: Response) {
     try {
-      const nome = req.query.nome;
-      if (typeof nome !== "string" || nome.trim() === "") {
-        return res.status(400).json({ error: "Nome inválido!" });
+      const { nome, id } = req.query;
+
+      if (id && typeof id === "string") {
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+          return res.status(400).json({ error: "ID inválido!" });
+        }
+
+        const produtoPorId = await produto.findById(id);
+        if (!produtoPorId) {
+          return res.status(404).json({ error: "Produto não encontrado!" });
+        }
+
+        return res.status(200).json(produtoPorId);
       }
 
-      const produtos = await produto.find({
-        nome: { $regex: nome, $options: "i" },
-      });
-      return res.status(200).json(produtos);
+      if (nome && typeof nome === "string") {
+        if (nome.trim() === "") {
+          return res.status(400).json({ error: "Nome inválido!" });
+        }
+
+        const produtosPorNome = await produto.find({
+          nome: { $regex: nome, $options: "i" },
+        });
+
+        if (produtosPorNome.length === 0) {
+          return res
+            .status(404)
+            .json({ error: "Produto(s) não encontrado(s)!" });
+        }
+
+        return res.status(200).json(produtosPorNome);
+      }
+
+      return res
+        .status(400)
+        .json({ error: "É necessário fornecer ID ou nome!" });
     } catch (error) {
       return res.status(500).json({ error: (error as Error).message });
     }
