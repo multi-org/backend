@@ -1,0 +1,77 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Multi API",
+        "description": "Uma API em Node usando typescript para o projeto Multi.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:4000",
+            "description": "Local server"
+        }
+    ],
+    "paths": {
+        "/produtos": {
+            "get": {
+                "summary": "Listar todos os produtos no Banco de Dados",
+                "description": "Retorna um Array de produtos",
+                "tags": [
+                    "Produtos"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Produto"
+                                    }
+                                },
+                                "examples": {
+                                    "produto":{
+                                        "value":{
+                                            "id": "5f8b3b3b3b3b3b3b3b3b3b3b",
+                                            "nome": "Produto 1",
+                                            "descricao": "Descrição do Produto 1",
+                                            "preco": 10
+                                        }
+        
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Erro interno no servidor"
+                    }
+                }
+
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "Produto":{
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "objectID"
+                    },
+                    "nome": {
+                        "type": "string"
+                    },
+                    "descricao": {
+                        "type": "string"
+                    },
+                    "preco": {
+                        "type": "number"
+                    }
+                }
+            }
+        }
+    }
+
+}
