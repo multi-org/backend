@@ -7,8 +7,7 @@ const app: Application = express();
 app.use(express.json());
 
 app.get("/produtos", ProdutoController.listarProdutos);
-app.get("/produtos/nome", ProdutoController.listarProdutoPorNomeOuId);
-app.get("/produtos/:id", ProdutoController.listarProdutoPorNomeOuId);
+app.get("/produtos/nomeOuId", ProdutoController.listarProdutoPorNomeOuId);
 app.post("/produtos", ProdutoController.cadastrarProduto);
 app.put("/produtos/:id", ProdutoController.atualizarProduto);
 app.delete("/produtos/:id", ProdutoController.deletarProduto);
@@ -17,11 +16,15 @@ jest.mock("../models/Produto");
 
 describe("ProdutoController", () => {
   const produtosMock = [
-    { nome: "Produto 1", preco: 100 },
-    { nome: "Produto 2", preco: 200 },
+    { nome: "Produto 1", preco: 100, _id: "66ff0f00e961f5caede885b4" },
+    { nome: "Produto 2", preco: 200, _id: "6707d6d290c982eb974c81e5" },
   ];
 
-  const produtoMock = { nome: "Produto 1", preco: 100 };
+  const produtoMock = {
+    nome: "Produto 1",
+    preco: 100,
+    _id: "66ff0f00e961f5caede885b4",
+  };
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -43,7 +46,9 @@ describe("ProdutoController", () => {
 
     it("Lista um produto pelo ID", async () => {
       (produto.findById as jest.Mock).mockResolvedValue(produtoMock);
-      const res = await request(app).get("/produtos/123");
+      const res = await request(app).get(
+        "/produtos/nomeOuId?id=66ff0f00e961f5caede885b4",
+      );
       expect(res.status).toBe(200);
       expect(res.body).toEqual(produtoMock);
     });
