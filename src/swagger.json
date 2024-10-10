@@ -97,6 +97,47 @@
                             }
                         }
                     }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Produto criado com sucesso",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Produto"
+                                },
+                                "examples": {
+                                    "produto": {
+                                        "value": {
+                                            "_id": "(ID gerado pelo banco)",
+                                            "nome": "Sala de Festas",
+                                            "descricao": "Uma sala equipada luzes piscantes e sons altos.",
+                                            "categoria": "Espaços",
+                                            "disponibilidade": [
+                                                {
+                                                    "data": "2025-10-05",
+                                                    "horario": "09:00-11:00",
+                                                    "_id": "(ID gerado pelo banco)"
+                                                },
+                                                {
+                                                    "data": "2027-10-06",
+                                                    "horario": "13:00-15:00",
+                                                    "_id": "(ID gerado pelo banco)"
+                                                }
+                                            ],
+                                            "preco": 1500
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Parametro Invalido"
+                    },
+                    "500": {
+                        "description": "Erro interno no servidor"
+                    }
                 }
             } 
         },
@@ -152,6 +193,36 @@
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Parametro Invalido"
+                    },
+                    "404": {
+                        "description": "Produto não encontrado"
+                    },
+                    "500": {
+                        "description": "Erro interno no servidor"
+                    }
+                }
+            }
+        },
+        "/produtos/{id}": {
+            "delete": {
+                "summary": "Deletar um produto específico no Banco de Dados",
+                "description": "Deleta um produto",
+                "tags": [
+                    "Produtos"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID do produto"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Produto deletado com sucesso"
                     },
                     "400": {
                         "description": "Parametro Invalido"
