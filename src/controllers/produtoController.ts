@@ -118,7 +118,7 @@ class ProdutoController {
         return res.status(404).json({ error: "Produto não encontrado!" });
       }
 
-      return res.status(200).json(produtoAtualizado);
+      return res.status(200).json("Produto atualizado com sucesso!");
     } catch (error) {
       return res.status(500).json({ error: (error as Error).message });
     }
