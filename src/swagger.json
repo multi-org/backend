@@ -62,9 +62,45 @@
                     }
                 }
 
-            }
+            },
+            "post": {
+                "summary": "Cadastro de um novo produto no Banco de Dados",
+                "description": "Cria um novo produto",
+                "tags": [
+                    "Produtos"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Produto"
+                            },
+                            "examples": {
+                                "produto": {
+                                    "value": {
+                                        "nome": "Sala de Festas",
+                                        "descricao": "Uma sala equipada luzes piscantes e sons altos.",
+                                        "categoria": "Espaços",
+                                        "disponibilidade": [
+                                            {
+                                                "data": "2025-10-05",
+                                                "horario": "09:00-11:00"
+                                            },
+                                            {
+                                                "data": "2027-10-06",
+                                                "horario": "13:00-15:00"
+                                            }
+                                        ],
+                                        "preco": 1500
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } 
         },
-        "/produtos/{id}": {
+        "/produtos/nomeOuId": {
             "get": {
                 "summary": "Listar um produto específico no Banco de Dados",
                 "description": "Retorna um produto",
@@ -73,13 +109,13 @@
                 ],
                 "parameters": [
                     {
+                        "name": "nome",
+                        "in": "query"
+                    },
+                    {
                         "name": "id",
-                        "in": "path",
-                        "description": "ID do produto",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
+                        "in": "query",
+                        "description": "ID do produto"
                     }
                 ],
                 "responses": {
@@ -116,6 +152,9 @@
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Parametro Invalido"
                     },
                     "404": {
                         "description": "Produto não encontrado"
@@ -169,5 +208,4 @@
             }
         }
     }
-
 }
