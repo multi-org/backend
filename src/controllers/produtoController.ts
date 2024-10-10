@@ -82,8 +82,8 @@ class ProdutoController {
           .json({ error: "Disponibilidade deve ser um array!" });
       }
 
-      const novoProduto = await produto.create(req.body);
-      return res.status(201).json(novoProduto);
+      await produto.create(req.body);
+      return res.status(201).json("Produto cadastrado com sucesso!");
     } catch (error) {
       return res.status(500).json({ error: (error as Error).message });
     }
@@ -126,31 +126,18 @@ class ProdutoController {
 
   static async deletarProduto(req: Request, res: Response) {
     try {
-      const { id } = req.params;
-      const { nome } = req.query;
+      const id = req.params.id;
 
-      if (!id && !nome) {
+      if (!id) {
         return res
           .status(400)
-          .json({ error: "É necessário fornecer o ID ou nome do produto" });
+          .json({ error: "É necessário fornecer o ID do produto" });
       }
 
       let produtoDeletado;
 
       if (id) {
         produtoDeletado = await produto.findByIdAndDelete(id);
-      }
-
-      if (nome) {
-        const produtoExistente = await produto.findOne({
-          nome: { $regex: new RegExp(nome as string, "i") },
-        });
-        if (!produtoExistente) {
-          return res.status(404).json({ error: "Produto não encontrado!" });
-        }
-        produtoDeletado = await produto.findOneAndDelete({
-          nome: { $regex: new RegExp(nome as string, "i") },
-        });
       }
 
       if (!produtoDeletado) {
