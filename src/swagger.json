@@ -207,6 +207,63 @@
             }
         },
         "/produtos/{id}": {
+            "put":{
+                "summary": "Atualizar um produto específico no Banco de Dados",
+                "description": "Atualiza um produto",
+                "tags": [
+                    "Produtos"
+                ],
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "description": "ID do produto"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/Produto"
+                            },
+                            "examples": {
+                                "produto": {
+                                    "value": {
+                                        "nome": "Sala de Festas",
+                                        "descricao": "Uma sala equipada luzes piscantes e sons altos.",
+                                        "categoria": "Espaços",
+                                        "disponibilidade": [
+                                            {
+                                                "data": "2025-10-05",
+                                                "horario": "09:00-11:00"
+                                            },
+                                            {
+                                                "data": "2027-10-06",
+                                                "horario": "13:00-15:00"
+                                            }
+                                        ],
+                                        "preco": 1500
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "responses": {
+                        "200": {
+                            "description": "Produto atualizado com sucesso"
+                        },
+                        "400": {
+                            "description": "Pelo menos um campo deve ser atualizado"
+                        },
+                        "404": {
+                            "description": "Produto não encontrado"
+                        },
+                        "500": {
+                            "description": "Erro interno no servidor"
+                        }
+                    }
+                }
+            },
             "delete": {
                 "summary": "Deletar um produto específico no Banco de Dados",
                 "description": "Deleta um produto",
