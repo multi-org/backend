@@ -56,7 +56,8 @@ $ npm install
 # Execute a aplicação em modo de desenvolvimento
 $ npm run start:dev
 
-# O servidor inciará na porta:4000 - acesse http://localhost:4000 
+# O servidor inciará na porta:4000 - acesse http://localhost:4000.
+# Tambem será possivel acessar a documentação da API - acesse http://localhost:4000/api-docs.
 
 ```
 
