@@ -1,5 +1,6 @@
 import express from "express";
 import conectarNaDB from "./config/dbConnect";
+import cors from 'cors';
 
 async function startApp() {
   try {
@@ -19,5 +20,6 @@ async function startApp() {
 startApp();
 
 const app = express();
+app.use(cors());
 
 export default app;
