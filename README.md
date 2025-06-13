@@ -64,10 +64,10 @@ $ npm run start:dev
 ```bash
 
 # Inicia server.ts
-$ npm run start
+$ npm run start:dev
 
 # Execute a aplicação em modo de desenvolvimento
-$ npm run start:dev
+$ npm run start:watch
 
 # Build da aplicação
 $ npm run build
