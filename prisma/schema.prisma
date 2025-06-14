@@ -15,23 +15,117 @@ datasource db {
 }
 
 enum UserStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
+  ACTIVE    @map("ativo")
+  INACTIVE  @map("inativo")
+  SUSPENDED @map("suspenso")
+}
+
+enum ProductType {
+  SPACE      @map("espaço")
+  EQUIPAMENT @map("equipamento")
+  SERVICE    @map("serviço")
+}
+
+enum PaymentStatus {
+  PENDING   @map("pendente")
+  COMPLETED @map("completo")
+  FAILED    @map("falhou")
+  REFUNDED  @map("reembolsado")
+}
+
+enum PaymentMethod {
+  CREDIT_CARD @map("cartão de crédito")
+  DEBIT_CARD  @map("cartão de débito")
+  PIX         @map("pix")
+  BANK_SLIP   @map("boleto bancário")
+}
+
+enum RentStatus {
+  PENDING   @map("pendente")
+  CONFIRMED @map("confirmado")
+  CANCELLED @map("cancelado")
+  COMPLETED @map("completo")
 }
 
 model User {
-  @@map("users")
-  userId          String   @id @default(uuid()) @db.Uuid
-  name            String   @db.VarChar(255)
-  email           String   @db.VarChar(255)
-  password        String   @db.VarChar(255)
-  phoneNumber     String   @db.VarChar(20)
-  cpf             String   @db.VarChar(255)
-  birthDate       DateTime @db.Date
+  userId          String     @unique @id @default(uuid()) @db.Uuid
+  name            String     @db.VarChar(255)
+  phoneNumber     String     @db.VarChar(20)
+  email           String     @db.VarChar(255)
+  password        String     @db.VarChar(255)
+  cpf             String     @db.VarChar(255)
+  birthDate       DateTime   @db.Date
   status          UserStatus @default(ACTIVE)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt @default(now())
-  isEmailVerified Boolean  @default(false)
-  isPhoneVerified Boolean  @default(false)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
+  isEmailVerified Boolean    @default(false)
+  isPhoneVerified Boolean    @default(false)
+
+  @@map("users")
+}
+
+model Enterprise {
+  id                                 String   @id @default(uuid()) @db.Uuid
+  email                              String   @db.VarChar(255)
+  enterpriseName                     String?  @db.VarChar(255)
+  cnpjOrCpf                          String   @db.VarChar(255)
+  enterpriseMission                  String   @db.VarChar(255)
+  phone                              String   @db.VarChar(20)
+  address                            String   @db.VarChar(255)
+  legalRepresentativeName            String   @db.VarChar(255)
+  legalRepresentativeCpf             String   @db.VarChar(255)
+  legalRepresentativeEmail           String   @db.VarChar(255)
+  legalRepresentativePhone           String   @db.VarChar(255)
+  legalRepresentativeBirthDate       DateTime @db.Date
+  legalRepresentativeAddress         String   @db.VarChar(255)
+  legalRepresentativeCertificate     String   @db.VarChar(255)
+  createdAt                          DateTime @default(now())
+  updatedAt                          DateTime @default(now()) @updatedAt
+  isEmailVerified                    Boolean  @default(false)
+  isPhoneVerified                    Boolean  @default(false)
+  isLegalRepresentativeEmailVerified Boolean  @default(false)
+  isLegalRepresentativePhoneVerified Boolean  @default(false)
+
+  @@map("enterprises")
+}
+
+model Payment {
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @db.Uuid
+  enterpriseId String?       @db.Uuid
+  amount       Decimal       @db.Decimal(10, 2)
+  method       PaymentMethod
+  status       PaymentStatus @default(PENDING)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @default(now()) @updatedAt
+
+  @@map("payments")
+}
+
+model Product {
+  id          String      @unique @id @default(uuid()) @db.Uuid
+  userId      String      @unique @db.Uuid
+  name        String      @db.VarChar(255)
+  description String?     @db.VarChar(1000)
+  availableDate String[]  @default([]) @db.VarChar(1000)
+  type        ProductType
+  price       Decimal     @db.Decimal(10, 2)
+  imagesUrls  String[]    @default([]) @db.VarChar(1000)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @default(now()) @updatedAt
+
+  @@map("products")
+}
+
+model rentService {
+  id                 String        @unique @id @default(uuid()) @db.Uuid
+  userId             String        @unique @db.Uuid
+  productId          String        @unique @db.Uuid
+  paymentId          String        @unique @db.Uuid
+  serviceDescription String?       @db.VarChar(1000)
+  startDate          DateTime      @db.Date
+  endDate            DateTime      @db.Date
+  statusOfService    RentStatus    @default(PENDING)
+  statusOfPayment    PaymentStatus @default(PENDING)
+  createdAt          DateTime      @default(now())
 }
