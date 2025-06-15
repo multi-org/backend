@@ -52,6 +52,7 @@ model User {
   name            String     @db.VarChar(255)
   phoneNumber     String     @db.VarChar(20)
   email           String     @db.VarChar(255)
+  profileImageUrl String?   @db.VarChar(1000)
   password        String     @db.VarChar(255)
   cpf             String     @db.VarChar(255)
   birthDate       DateTime   @db.Date
