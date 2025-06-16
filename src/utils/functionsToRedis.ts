@@ -24,7 +24,7 @@ export const sendVerificationCodeToRedis = async (email: string) => {
         prefix: "verification_code",
         key: email,
         value: dictCode,
-        ttl: 600
+        ttl: 600 
     })
     if (!result) {
         logger.error("Failed to save verification code to Redis");

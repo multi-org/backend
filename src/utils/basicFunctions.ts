@@ -7,7 +7,12 @@ export const generateRandomCode = async () => {
 
 }
 
-export const validationCpf = (cpf: string): object => {
+interface validationResult {
+    message: string;
+    status: number;
+}
+
+export const validationCpf = async (cpf: string): Promise<validationResult> => {
     logger.info('Validating CPF');
 
     cpf = cpf.replace(/[^\d]+/g, '');
