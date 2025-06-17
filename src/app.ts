@@ -4,6 +4,7 @@ import cookieParser from "cookie-parser";
 import { connectDatabase } from "./config/postgreConnect";
 import { connectRedis } from "./config/redis"
 import mainRouter from "./routes/index";
+import userRoutes from "./routes/user_routes";
 
 
 const app = express();
@@ -13,6 +14,7 @@ connectRedis();
 
 app.use(express.json());
 app.use(cookieParser());
-app.use(mainRouter);
+// app.use(mainRouter);
+app.use("/users", userRoutes);
 
 export default app;

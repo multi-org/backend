@@ -13,7 +13,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
-const PORT = process.env.PORT || 1203;
+const PORT = process.env.PORT || 8083;
 
 app.listen(PORT, () => {
   console.log(`✅ Servidor rodando no link http://localhost:${PORT}/`);

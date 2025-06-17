@@ -11,12 +11,12 @@ const mailOptions = (email: string, code: string) => {
 };
 
 export const verificationCodeEmail = {
-    key: 'verificationCodeEmail',
+    key: 'sendVerificationCode',
     async handle({ data }: { data: { email: string, code: string } }) {
         const { email, code } = data;
         try {
             await transporter.sendMail(mailOptions(email, code));
-            logger.info(`Verification code email sent to ${email}`);
+            logger.info(`Verification code sent suceccessfully`);
         } catch (error) {
             logger.error('Error sending verification code to email:', error);
             throw new CustomError('Error sending verification code to email', 500);
