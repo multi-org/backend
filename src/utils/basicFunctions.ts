@@ -1,7 +1,5 @@
-import { cp } from 'fs';
 import { logger } from './logger';
 import {cnpj, cpf} from 'cpf-cnpj-validator';
-import { promises } from 'dns';
 
 export const generateRandomCode = async () => {
     logger.info('Generating random code');
