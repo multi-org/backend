@@ -1,9 +1,11 @@
 import { z } from 'zod';
 
+export const emailZode = z.string().email("Invalid email format");
+
 export const createUserZode = z.object({
     name: z.string().min(1, "Name is required"),
-    email: z.string().email("Invalid email format"),
     password: z.string().min(8, "Password must be at least 8 characters long"),
+    confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters long"),
     phoneNumber: z.string().min(10, "Phone number must be at least 10 characters long"),
     cpf: z.string().length(14, "CPF must be exactly 11 characters long"),
     birthDate: z.string().refine((date: string ) => {
@@ -23,3 +25,4 @@ export interface createUserDTOS {
 }
 
 export type createUserZodeType = z.infer<typeof createUserZode>;
+export type emailZode = z.infer<typeof emailZode>;
