@@ -31,6 +31,6 @@ export const sendVerificationCodeToRedis = async (email: string) => {
         throw new CustomError("Failed to save verification code to Redis", 500);
     }
 
-    logger.info(`Verification code for ${email} saved successfully`);
+    logger.info(`Verification code saved successfully`);
     return code;
 };
