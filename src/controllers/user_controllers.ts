@@ -42,6 +42,15 @@ class userController {
         
         try {
             const result = await UserService.validEmail(email, req.body);
+
+            res.cookie('codeValidation', true, {
+                httpOnly: true,
+                maxAge: 60 * 60 * 1000, // 1 hora
+                secure: process.env.NODE_ENV === 'production',  
+                sameSite: 'lax',
+                path: '/'
+            });
+            
             return res.status(200).json(result.message);
         } catch (error: any) {
             const statusCode = error.status || 500;
@@ -56,6 +65,9 @@ class userController {
         const email = req.cookies.email;
         if (!email) {
             return res.status(500).json({ message: "Email not found in cookies" });
+        }
+        if (!req.cookies.codeValidation) {
+            return res.status(400).json({ message: "Email validation code not verified" });
         }
 
         if (!result.success) {
@@ -124,6 +136,7 @@ class userController {
     async logout(req: Request, res: Response) {
         res.clearCookie("token", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
         res.clearCookie("email", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
+        res.clearCookie("codeValidation", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
         return res.status(200).json({ message: "Logout successful" });
     }
 
