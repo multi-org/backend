@@ -129,7 +129,7 @@ export class UserServices {
 
         const user = await userRepository.findUserByEmail(email);
         if (!user) {
-            logger.warn(`User with email ${email} not found`);
+            logger.warn(`User not found`);
             throw new CustomError("User not found", 404);
         }
 
