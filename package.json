@@ -48,6 +48,7 @@
     "bull": "^4.16.5",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "cpf-cnpj-validator": "^1.0.3",
     "dotenv": "^16.4.5",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",

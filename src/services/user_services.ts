@@ -1,5 +1,5 @@
 import userRepository from '@app/repositories/user_repository';
-import { createUserDTOS } from '@app/models/models_user';
+import { createUserDTOS } from '@app/models/User_models';
 import { logger, CustomError } from '@app/utils/logger';
 import { convertDateToDatabase, convertDateToUser , validationCpf, verifyBirthDate } from '@app/utils/basicFunctions'
 import { dataSave, delData, getData } from '@app/models/redis_models';

@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import {cnpj, cpf} from 'cpf-cnpj-validator';
 
 export const generateRandomCode = async () => {
     logger.info('Generating random code');
@@ -12,44 +13,23 @@ interface validationResult {
     status: number;
 }
 
-export const validationCpf = async (cpf: string): Promise<validationResult> => {
+export const validationCpf = async (cpfValue: string): Promise<validationResult> => {
     logger.info('Validating CPF');
 
-    cpf = cpf.replace(/[^\d]+/g, '');
-
-    if (cpf.length !== 11) {
-        logger.error('CPF must have 11 digits');
-        return{message: "CPF must have 11 digits", status: 400};
-        
+    if (!cpf.isValid(cpfValue)) {
+        logger.error('Invalid CPF');
+        return {message: 'Invalid CPF', status: 400};
     }
-
-    if (/^(\d)\1{10}$/.test(cpf)) {
-        logger.error('CPF cannot be all the same digit');
-        return{message: "CPF cannot be all the same digit", status: 400};
-    }
-
-    let sum1: number = 0;
-    for (let i = 0; i < 9; i++) {
-        sum1 += parseInt(cpf[i]) * (10 - i);
-    }
-
-    let digit1 = (sum1 * 10) % 11;
-    digit1 = digit1 === 10 ? 0 : digit1;
-
-    let sum2: number = 0;
-    for (let i = 0; i < 10; i++) {
-        sum2 += parseInt(cpf[i]) * (11 - i);
-    }
-
-    let digit2 = (sum2 * 10) % 11;
-    digit2 = digit2 === 10 ? 0 : 1;
-
-    if (cpf[9] !== digit1.toString() || cpf[10] !== digit2.toString()) {
-        logger.error('Invalid CPF digits');
-        return {message:'Invalid CPF digits', status: 400};
-    }
-
     return {message: 'Valid CPF', status: 200};
+}
+
+export const validationCnpj = async (cnpValue: string): Promise<validationResult> => {
+    logger.info('Validating CNPJ');
+    if (!cnpj.isValid(cnpValue)) {
+        logger.error('Invalid CNPJ');
+        return {message: 'Invalid CNPJ', status: 400};
+    }
+    return {message: 'Valid CNPJ', status: 200};
 }
 
 export const convertDateToUser = async (birthDate: string) => {

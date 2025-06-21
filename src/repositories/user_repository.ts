@@ -1,7 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { createUserDTOS } from '@app/models/models_user';
-import { UUID } from "crypto";
-
+import { createUserDTOS } from '@app/models/User_models';
 
 const prisma = new PrismaClient();
 
