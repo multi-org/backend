@@ -2,19 +2,26 @@ import { z } from 'zod';
 
 export const createEnterpriseZode = z.object({
     enterpriseName: z.string().min(1, "Enterprise name is required"),
-    email: z.string().email("Invalid email format"),
-    cnpjOrCpf: z.string().min(14, "CNPJ or CPF must be at least 14 characters long"),
+    enterpriseEmail: z.string().email("Invalid email format"),
+    enterpriseDescription: z.string().optional(),
+    enterpriseCnpj: z.string().min(18, "CNPJ must be at least 18 characters long"),
+    microenterprise: z.boolean(),
     enterpriseMission: z.string().min(1, "Enterprise mission is required"),
-    phone: z.string().min(10, "Phone number must be at least 10 characters long"),
-})
+    enterprisePhone: z.string().min(10, "Phone number must be at least 10 characters long"),
+});
 
 
 export interface createEnterpriseDTOS {
     enterpriseName: string,
-    email: string,
-    cnpjOrCpf: string,
+    enterpriseEmail: string,
+    enterpriseCnpj: string,
+    microenterprise: boolean,
     enterpriseMission: string,
-    phone: string,
+    enterpriseDescription?: string,
+    enterprisePhone: string,
+    legalRepresentatives: {
+        idRepresentative: string,
+    }[]
 }
 
 export type createEnterpriseZodeType = z.infer<typeof createEnterpriseZode>;
