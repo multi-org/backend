@@ -166,6 +166,13 @@ model SubsidiaryCompany {
   id            String   @id @default(uuid()) @db.Uuid
   enterpriseId  String   @db.Uuid
   enterprise    Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  phoneSubsidiary String @db.VarChar(20)
+  emailSubsidiary String? @db.VarChar(50)
+  nameSubsidiary String? @db.VarChar(100)
+  cnpjSubsidiary String? @db.VarChar(20)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @default(now()) @updatedAt
+  status        Status @default(ACTIVE)
   Address Address?
    
    @@schema("multi")
