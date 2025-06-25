@@ -5,7 +5,7 @@ import './src/jobs/init.ts';
 
 // configuração do cors
 const corsOptions = {
-  origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:4000"],
+  origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:5173"],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   credentials: true,
   optionsSuccessStatus: 204,
