@@ -150,11 +150,14 @@ model enterpriseUserRoles {
   id Int @id @default(autoincrement()) @db.Integer
   userId String @db.Uuid
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
+  enterpriseId String   @db.Uuid 
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   roleId Int
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
+  @@unique([userId, enterpriseId, roleId])
   @@map("enterprise_user_roles")
   @@schema("multi")
 }
@@ -178,9 +181,11 @@ model Enterprise {
   Address                 Address?
   subsidiaries            Subsidiary[]
   products                Product[]
+  enterpriseUserRoles enterpriseUserRoles[]
 
   @@map("enterprises")  
   @@schema("multi")
+  
   
 }
 
