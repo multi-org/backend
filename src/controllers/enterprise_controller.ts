@@ -15,7 +15,7 @@ class EnterpriseController {
         }
 
         try {
-            const userId = req.userId;
+            const userId = req.userId!;
             
             const response = await EnterpriseService.createEnterprise({
                 ...result.data,

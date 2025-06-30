@@ -23,12 +23,48 @@ export class UserRepository {
     }
 
     async findUserById(userId: string) {
+        const roleSelect = {
+        id: true,
+        name: true,
+        description: true,
+        rolesPermissions: {
+            select: {
+                permission: {
+                    select: {
+                        action: true,
+                        resource: true,
+                        description: true
+                    }
+                }
+            }
+        }
+        };
+        
         const user = await prisma.user.findUnique({
             where: {
                 userId: userId,
                 status: 'ACTIVE'
+            },
+            select: {
+                name: true,
+                email: true,
+                userId: true,
+                status: true,
+                phoneNumber: true,
+                cpf: true,
+                isEmailVerified: true,
+                birthDate: true,
+                isPhoneVerified: true,
+                userRoles: {
+                    select: {
+                        role: {
+                            select: roleSelect
+                        }
+                    }
+                },
+                enterpriseUserRoles: true
             }
-        })
+        });
         return user;
     }
 }
