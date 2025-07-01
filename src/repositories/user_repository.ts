@@ -86,6 +86,26 @@ export class UserRepository {
         });
         return user;
     }
+
+    async findUserRoleByName(name: string) {
+        const role = await prisma.role.findFirst({
+            where: {
+                name: name
+            }
+        })
+
+        return role;
+    }
+
+    async assignRoleToUser(userId: string, roleId: number) { 
+        return await prisma.userRole.create({
+            data: {
+                userId: userId,
+                roleId: roleId
+            }
+        })
+    }
+
 }
 
 export default new UserRepository();
