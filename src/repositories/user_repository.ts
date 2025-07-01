@@ -23,23 +23,6 @@ export class UserRepository {
     }
 
     async findUserById(userId: string) {
-        const roleSelect = {
-        id: true,
-        name: true,
-        description: true,
-        rolesPermissions: {
-            select: {
-                permission: {
-                    select: {
-                        action: true,
-                        resource: true,
-                        description: true
-                    }
-                }
-            }
-        }
-        };
-        
         const user = await prisma.user.findUnique({
             where: {
                 userId: userId,
@@ -58,11 +41,47 @@ export class UserRepository {
                 userRoles: {
                     select: {
                         role: {
-                            select: roleSelect
+                            select: {
+                                id: true,
+                                name: true,
+                                description: true,
+                                rolesPermissions: {
+                                    select: {
+                                        permission: {
+                                            select: {
+                                                action: true,
+                                                resource: true,
+                                                description: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 },
-                enterpriseUserRoles: true
+                enterpriseUserRoles: {
+                    select: {
+                        role: {
+                            select: {
+                                id: true,
+                                name: true,
+                                rolesPermissions: {
+                                    select: {
+                                        permission: {
+                                            select: {
+                                                action: true,
+                                                resource: true,
+                                                description: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        userId: true,
+                    }
+                }
             }
         });
         return user;
