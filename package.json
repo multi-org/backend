@@ -11,6 +11,9 @@
     "lint": "eslint",
     "test": "jest"
   },
+  "prisma": {
+    "seed": "tsx prisma/seedrs/index.ts"
+  }, 
   "keywords": [],
   "author": "",
   "license": "ISC",
