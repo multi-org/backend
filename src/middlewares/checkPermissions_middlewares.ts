@@ -52,13 +52,7 @@ export const checkCompanyPermission = (requiredPermission: string) => {
     return async (req: AuthRequest, res: Response, next: NextFunction) => {
         try {
             const userId = req.userId!;
-            const userWithPermission = await userRepository.findUserById(userId);
-            if (!userWithPermission || !userWithPermission.userRoles) {
-                logger.error('User not found or no roles assigned.');
-                return next(new CustomError('User not found or no roles assigned.', 404));
-            }
-
-            const { companyId } = req.query;
+            const { companyId } = req.params;
             if (!companyId) {
                 logger.warn('Event ID not provided.');
                 return next(new CustomError('Event ID not provided', 400));
@@ -70,36 +64,31 @@ export const checkCompanyPermission = (requiredPermission: string) => {
                 throw new CustomError('Invalid permission format. Expected format: action:resource', 400);
             }
 
-            const userWithDetails = userWithPermission.enterpriseUserRoles.map(lr => lr.id === companyId);
-            if (!userWithDetails) {
-                logger.error(`User with ID ${userId} not found.`);
-                return next(new CustomError('User not found.', 404));
+            const user = await userRepository.findUserById(userId);
+            if (!user) {
+                logger.error('User not found.');
+                return next(new CustomError('User not found', 404));
             }
 
-            const isSystemAdmin = userWithPermission.userRoles.some(r => r.role.name === 'SYSTEM_ADMIN');
+            const isSystemAdmin = user.userRoles.some(r => r.role.name === 'SYSTEM_ADMIN');
             if (isSystemAdmin) {
                 logger.info(`RBAC: System admin autorizado para ${requiredPermission}.`);
                 return next();
             }
 
-            let hasGlobalPermission = false;
-            for (const userRole of userWithPermission.userRoles) {
-                const role = userRole.role;
-                if (role.rolesPermissions) {
-                    for (const rolePermission of role.rolesPermissions) {
-                        const permission = rolePermission.permission;
-                        if (permission.action === requeiredAction && permission.resource === requiredResource) {
-                            hasGlobalPermission = true;
-                            break;
-                        }
-                    }
-                }
-                if (hasGlobalPermission) break;
+            const userHasCompanyPermission = user.enterpriseUserRoles.some(er => er.role.rolesPermissions?.some(rp => 
+                rp.permission.action === requeiredAction &&
+                rp.permission.resource === requiredResource
+            ) && er.userId === userId);
+
+
+            if (!userHasCompanyPermission) {
+                logger.warn(`User does not have permission for company: ${requiredPermission}`);
+                return next(new CustomError(`Access denied. You do not have permission for company: ${requiredPermission}`, 403));
             }
 
-            if (!hasSubscribers) {
-                const companyUserRoles = "" // = await 
-            }
+            logger.info(`RBAC: Usuário autorizado para ${requiredPermission} na empresa ${companyId}.`);
+            next();
 
         } catch (error: any) {
             logger.error(`Error in checkCompanyPermission middleware: ${error.message}`);
