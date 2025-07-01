@@ -6,7 +6,7 @@ export const createUserZode = z.object({
     name: z.string().min(1, "Name is required"),
     password: z.string().min(8, "Password must be at least 8 characters long"),
     confirmPassword: z.string().min(8, "Confirm password must be at least 8 characters long"),
-    phoneNumber: z.string().min(17, "Phone number must be at least 17 characters long"),
+    phoneNumber: z.string().min(11, "Phone number must be at least 11 characters long"),
     cpf: z.string().length(14, "CPF must be exactly 11 characters long"),
     birthDate: z.string().refine((date: string ) => {
         const parsedDate = new Date(date);
