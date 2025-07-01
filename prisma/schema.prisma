@@ -1,0 +1,338 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRE_URL")
+  schemas = ["multi"]
+}
+
+enum Status {
+  ACTIVE    @map("ativo")
+  INACTIVE  @map("inativo")
+  SUSPENDED @map("suspenso")
+  DELETED   @map("excluído")
+  @@schema("multi")
+}
+
+enum ProductType {
+  SPACE      @map("espaço")
+  EQUIPAMENT @map("equipamento")
+  SERVICE    @map("serviço")
+  @@schema("multi")
+}
+
+enum PaymentStatus {
+  PENDING   @map("pendente")
+  COMPLETED @map("completo")
+  FAILED    @map("falhou")
+  REFUNDED  @map("reembolsado")  
+  @@schema("multi")
+}
+
+enum PaymentMethod {
+  CREDIT_CARD @map("cartão de crédito")
+  DEBIT_CARD  @map("cartão de débito")
+  PIX         @map("pix")
+  BANK_SLIP   @map("boleto bancário")  
+  @@schema("multi")
+}
+
+enum RentStatus {
+  PENDING   @map("pendente")
+  CONFIRMED @map("confirmado")
+  CANCELLED @map("cancelado")
+  COMPLETED @map("completo")  
+  @@schema("multi")
+}
+
+enum AddressType {
+  USER @map("usuário")
+  ENTERPRISE @map("empresa")
+  SUBSIDIARY @map("filial")
+  @@schema("multi")
+}
+
+model User {
+  userId          String     @unique @id @default(uuid()) @db.Uuid
+  name            String     @db.VarChar(255)
+  phoneNumber     String     @db.VarChar(20)
+  email           String     @db.VarChar(255)
+  profileImageUrl String?   @db.VarChar(1000)
+  password        String     @db.VarChar(255)
+  cpf             String     @db.VarChar(255)
+  birthDate       DateTime   @db.Date
+  status          Status     @default(ACTIVE)
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @default(now()) @updatedAt
+
+  isEmailVerified Boolean    @default(false)
+  isPhoneVerified Boolean    @default(false)
+
+  userRoles UserRole[]
+  legalRepresentatives    LegalRepresentative[]
+  CompanyAssociates CompanyAssociate[]
+  Address Address?
+  rents Rent[]
+  Payment Payment[]
+  products Product[]
+  enterpriseUserRoles enterpriseUserRoles[]
+
+  @@map("users")
+  @@schema("multi")
+}
+
+model Role {
+  id    Int @id @default(autoincrement()) @db.Integer
+  name  String @db.VarChar(255)
+  description String @db.VarChar(1000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  rolesPermissions RolesPermission[]
+  UserRoles UserRole[]
+  enterpriseUserRoles enterpriseUserRoles[]
+
+  @@map("roles")
+  @@schema("multi")
+  
+}
+
+model Permission {
+  id            Int @id @default(autoincrement()) @db.Integer
+  action        String @db.VarChar(50)
+  resource   String @db.VarChar(50)
+  description   String? @db.VarChar(1000)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  rolesPermissions RolesPermission[]
+
+  @@map("permissions")
+  @@schema("multi")
+}
+
+model RolesPermission {
+  roleId   Int
+  role     Role  @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade) 
+  permissionId Int
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@id([roleId, permissionId])
+  @@map("roles_permissions")
+  @@schema("multi")
+}
+
+model UserRole {
+  userId    String @db.Uuid
+  user      User   @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
+  roleId    Int
+  role      Role   @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@id([userId, roleId])
+  @@map("user_roles")
+  @@schema("multi")
+}
+
+model enterpriseUserRoles {
+  id Int @id @default(autoincrement()) @db.Integer
+  userId String @db.Uuid
+  user User @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
+  roleId Int
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@map("enterprise_user_roles")
+  @@schema("multi")
+}
+
+model Enterprise {
+  id            String   @id @default(uuid()) @db.Uuid
+  name          String   @db.VarChar(100)
+  email         String   @db.VarChar(50)
+  cnpj           String   @db.VarChar(18)
+  phone                 String   @db.VarChar(20)        
+  description           String?  @db.VarChar(1000)        
+  mission               String?  @db.VarChar(255)         
+  isMicroenterprise     Boolean  @default(false)         
+  status                Status   @default(ACTIVE)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @default(now()) @updatedAt
+  associateDiscountRate Decimal  @default(0.0) @db.Decimal(5, 4) 
+
+  legalRepresentatives    LegalRepresentative[]
+  CompanyAssociates       CompanyAssociate[]
+  Address                 Address?
+  subsidiaries            Subsidiary[]
+  products                Product[]
+
+  @@map("enterprises")  
+  @@schema("multi")
+  
+}
+
+model Subsidiary {
+  id            String   @id @default(uuid()) @db.Uuid
+  enterpriseId  String   @db.Uuid
+  enterprise    Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  name         String?  @db.VarChar(100) 
+  email        String?  @db.VarChar(50)  
+  phone        String?  @db.VarChar(20)  
+  cnpj         String?  @unique @db.VarChar(18) 
+  status       Status   @default(ACTIVE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  Address Address?
+  products  Product[]
+   
+   @@map("subsidiaries")
+   @@schema("multi")
+}
+
+
+model LegalRepresentative {
+  enterpriseId String     @db.Uuid
+  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userId       String     @db.Uuid 
+  user         User       @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("legal_representatives")  
+  @@schema("multi")
+  @@id([enterpriseId, userId])
+}
+
+model CompanyAssociate {
+  userId                String  @db.Uuid
+  user                  User     @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
+  registrationNumber    String @db.VarChar(10)
+  enterpriseId          String   @db.Uuid
+  enterprise            Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @default(now()) @updatedAt
+
+  @@schema("multi")
+  @@id([userId, enterpriseId])
+  @@map("company_associates")
+}
+
+model Address{
+  id              String   @id @default(uuid()) @db.Uuid
+  typeAddress     AddressType
+  street          String   @db.VarChar(255)
+  number          String   @db.VarChar(20)
+  complement      String?  @db.VarChar(255)
+  neighborhood    String   @db.VarChar(100)
+  city            String   @db.VarChar(100)
+  state           String   @db.VarChar(100)
+  postalCode      String   @db.VarChar(20)
+  country         String   @db.VarChar(100)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+
+  userId          String?  @unique @db.Uuid
+  user            User?    @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
+
+  enterpriseId    String?  @unique @db.Uuid
+  enterprise      Enterprise? @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  subsidiaryId    String?  @unique @db.Uuid
+  subsidiary      Subsidiary? @relation(fields: [subsidiaryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  
+  @@schema("multi")
+  @@map("addresses")
+}
+
+model Payment {
+  id           String        @id @default(uuid()) @db.Uuid
+  userId       String        @db.Uuid 
+  user         User          @relation(fields: [userId], references: [userId]) 
+  rentId       String?       @unique @db.Uuid // Opcional, se o pagamento for para um aluguel específico
+  rent         Rent?         @relation(fields: [rentId], references: [id])
+  amount       Decimal       @db.Decimal(10, 2)
+  method       PaymentMethod
+  status       PaymentStatus @default(PENDING)
+  transactionId String?      @unique @db.VarChar(255) 
+  paidAt       DateTime?     
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("payments")
+  @@schema("multi")
+}
+
+model Product {
+  id            String      @id @default(uuid()) @db.Uuid
+  ownerId       String      @db.Uuid // Quem é o proprietário/anunciante do produto (User ou Enterprise/Subsidiary)
+  ownerType     String      @db.VarChar(50) // 'USER', 'ENTERPRISE', 'SUBSIDIARY' 
+  name          String      @db.VarChar(255)
+  description   String?     @db.VarChar(1000)
+  type          ProductType
+  basePrice     Decimal     @db.Decimal(10, 2) 
+  imagesUrls    String[]    @default([]) @db.VarChar(1000)
+  status        Status      @default(ACTIVE) 
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  rents         Rent[]
+  User User[]
+  Enterprise Enterprise[]
+  Subsidiary Subsidiary[]
+  ProductAvailability ProductAvailability[]
+
+  @@map("products")  
+  @@schema("multi")
+}
+
+model Rent {
+  id              String        @id @default(uuid()) @db.Uuid
+  userId          String        @db.Uuid 
+  user            User          @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade) 
+  productId       String        @db.Uuid 
+  product         Product       @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  paymentId       String?       @db.Uuid  @unique  
+  payment         Payment?      @relation
+  description     String?       @db.VarChar(1000) 
+  startDate       DateTime      @db.Date
+  endDate         DateTime      @db.Date
+  totalAmount     Decimal       @db.Decimal(10, 2) 
+  discountApplied Decimal       @db.Decimal(10, 2) @default(0.0)
+  status          RentStatus    @default(PENDING) 
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt 
+
+
+  @@map("rents") 
+  @@schema("multi")
+}
+
+model ProductAvailability {
+  id        String   @id @default(uuid()) @db.Uuid
+  productId String   @db.Uuid
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  startDate DateTime @db.Date
+  endDate   DateTime @db.Date
+  isAvailable Boolean @default(true) // true se disponível, false se bloqueado
+  priceOverride Decimal? @db.Decimal(10, 2) // Preço específico para este período, se diferente do basePrice
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("product_availabilities")
+  @@schema("multi")
+}
