@@ -4,7 +4,7 @@ import { createEnterpriseZode } from "@app/models/Enterprise_models";
 import EnterpriseService from "@app/services/enterprise_services";
 
 class EnterpriseController { 
-    async createEnterprise(req: AuthRequest, res: Response) {
+    async createCompany(req: AuthRequest, res: Response) {
         const result = createEnterpriseZode.safeParse(req.body);
         if (!result.success) {
             const errors = result.error.flatten().fieldErrors;
@@ -33,14 +33,14 @@ class EnterpriseController {
     }
     
     async findEnterpriseById(req: AuthRequest, res: Response) {
-        const { enterprise_id } = req.query as { enterprise_id?: string };
+        const { companyId } = req.params;
 
-        if (!enterprise_id) {
+        if (!companyId) {
             return res.status(400).json({ message: "Enterprise ID is required" });
         }
 
         try {
-            const response = await EnterpriseService.findEnterpriseById(enterprise_id);
+            const response = await EnterpriseService.findEnterpriseById(companyId);
             return res.status(response.status).json(response);
         } catch (error: any) {
             const statusCode = error.status || 500;
