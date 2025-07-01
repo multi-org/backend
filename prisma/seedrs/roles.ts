@@ -1,6 +1,5 @@
 import { PrismaClient } from '@prisma/client';
 import {logger} from '@app/utils/logger'
-import { record } from 'zod';
 
 const prisma = new PrismaClient();
 
@@ -104,6 +103,13 @@ export async function permissions() {
       description: 'Allows managing company subsidiary settings and users',
     }
   ];
+
+  await prisma.permission.createMany({
+    data: permissions,
+    skipDuplicates: true
+  });
+
+  logger.info('✅ Permissions seeded successfully');
 }
 
 export async function RolesPermissions() {
