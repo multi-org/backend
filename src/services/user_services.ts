@@ -110,6 +110,14 @@ export class UserServices {
             throw new CustomError("Failed to create user in the database", 500);
         }
 
+        const defaultRoleName = await userRepository.findUserRoleByName('company_user');
+        if (!defaultRoleName) {
+            logger.error("Default role not found");
+            throw new CustomError("Default role not found", 500);
+        }
+
+        await userRepository.assignRoleToUser(newUser.userId, defaultRoleName.id);
+
         const token = await generateToken(newUser.userId, email)
         if (!token) {
             logger.error("Failed to generate JWT token");

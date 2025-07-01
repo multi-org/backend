@@ -28,6 +28,6 @@ app.use(express.json());
 app.use(cookieParser());
 // app.use(mainRouter);
 app.use("/users", userRoutes);
-app.use("/enterprises", enterpriseRoutes);
+app.use("/companies", enterpriseRoutes);
 
 export default app;
