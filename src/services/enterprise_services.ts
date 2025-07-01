@@ -13,13 +13,13 @@ class EnterpriseServices {
             throw new CustomError("At least one legal representative is required", 400);
         }
 
-        const isValidCnpj = await validationCnpj(enterpriseData.enterpriseCnpj);
+        const isValidCnpj = await validationCnpj(enterpriseData.cnpj);
         if (isValidCnpj.status !== 200) {
             logger.warn('Invalid CNPJ provided');
             throw new CustomError(isValidCnpj.message, isValidCnpj.status);
         }
 
-        const existingEnterprise = await enterpriseRepository.findEnterpriseByEmail(enterpriseData.enterpriseEmail);
+        const existingEnterprise = await enterpriseRepository.findEnterpriseByEmail(enterpriseData.email);
         if (existingEnterprise) {
             logger.warn(`Enterprise already exists`);
             throw new CustomError("Email already registered", 400);
@@ -31,7 +31,7 @@ class EnterpriseServices {
             throw new CustomError("Failed to create enterprise", 500);
         }
 
-        return { message: "Successfully created company", status: 200, enterpriseName: newEnterprise.enterpriseName };
+        return { message: "Successfully created company", status: 200, enterpriseName: newEnterprise.name };
     }
 
     async findEnterpriseById(id: string) {
