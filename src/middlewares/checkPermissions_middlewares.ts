@@ -11,7 +11,7 @@ export const checkPermission = (requiredPermission: string) => {
 
             if (!user || !user.userRoles?.length) {
                 logger.error('User not found or no roles assigned.');
-                return next(new CustomError('User not found or no roles assigned.', 404));
+                throw new CustomError('User not found or no roles assigned.', 404);
             }
 
             const [requeiredAction, requiredResource] = requiredPermission.split(':');
@@ -39,7 +39,7 @@ export const checkPermission = (requiredPermission: string) => {
 
             if (!hasPermission) {
                 logger.warn(`User does not have permission: ${requiredPermission}`);
-                return next(new CustomError(`Access denied. You do not have permission: ${requiredPermission}`, 403));
+                throw new CustomError(`Access denied. You do not have permission: ${requiredPermission}`, 403);
             }
 
             logger.info(`RBAC: Usuário autorizado para ${requiredPermission}.`);
@@ -47,7 +47,10 @@ export const checkPermission = (requiredPermission: string) => {
 
         } catch (error: any) {
             logger.error(`Error in checkCompanyPermission middleware: ${error.message}`);
-            return next(new CustomError('Error checking permissions', 500));
+            const statusCode = error.statusCode || 500;
+            return res.status(statusCode).json({
+                message: error.message
+            });
         }
     };
 };
@@ -60,7 +63,7 @@ export const checkCompanyPermission = (requiredPermission: string) => {
 
             if (!companyId) {
                 logger.warn('Company ID not provided');
-                return next(new CustomError('Company ID not provided', 400));
+                throw new CustomError('Company ID not provided', 400);
             }
 
             const [requeiredAction, requiredResource] = requiredPermission.split(':');
@@ -72,7 +75,7 @@ export const checkCompanyPermission = (requiredPermission: string) => {
             const user = await userRepository.findUserById(userId);
             if (!user) {
                 logger.error('User not found.');
-                return next(new CustomError('User not found', 404));
+                throw new CustomError('User not found', 404);
             }
 
             const isSystemAdmin = user.userRoles?.some(r => r.role.name === 'system_admin');
@@ -89,7 +92,7 @@ export const checkCompanyPermission = (requiredPermission: string) => {
 
             if (!hasCompanyPermission) {
                 logger.warn(`Access denied for company: ${requiredPermission}`);
-                return next(new CustomError(`Access denied for company: ${requiredPermission}`, 403));
+                throw new CustomError(`Access denied for company: ${requiredPermission}`, 403);
             }
 
             logger.info(`RBAC: Usuário autorizado para ${requiredPermission} na empresa ${companyId}.`);
@@ -97,7 +100,10 @@ export const checkCompanyPermission = (requiredPermission: string) => {
 
         } catch (error: any) {
             logger.error(`Error in checkCompanyPermission middleware: ${error.message}`);
-            return next(new CustomError('Error checking permissions', 500));
+            const statusCode = error.statusCode || 500;
+            return res.status(statusCode).json({
+                message: error.message
+            });
         }   
     } 
 }
