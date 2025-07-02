@@ -17,7 +17,9 @@ export const createUserZode = z.object({
     const parsedDate = new Date(date);
     return !isNaN(parsedDate.getTime());
   }, "Invalid date format"),
-  preferences: z.number().array()
+  preferences: z.array(z.union([z.literal(1), z.literal(2), z.literal(3)]), {
+    required_error: "Preferences are required",
+  }).nonempty("Preferences cannot be empty"),
 });
 
 export interface createUserDTOS {
