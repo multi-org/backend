@@ -1,5 +1,5 @@
-import { PrismaClient } from "@prisma/client";
-import { createUserDTOS } from '@app/models/User_models';
+import { AddressType, PrismaClient } from "@prisma/client";
+import { createUserDTOS, UserAddress } from '@app/models/User_models';
 
 const prisma = new PrismaClient();
 
@@ -16,6 +16,26 @@ export class UserRepository {
         const user = await prisma.user.findFirst({
             where: {
                 email: email,
+                status: 'ACTIVE'
+            }
+        })
+        return user;
+    }
+
+    async findUserByCpf(cpf: string) {
+        const user = await prisma.user.findFirst({
+            where: {
+                cpf: cpf,
+                status: 'ACTIVE'
+            }
+        })
+        return user;
+    }
+
+    async findUserByPhoneNumber(phoneNumber: string) {
+        const user = await prisma.user.findFirst({
+            where: {
+                phoneNumber: phoneNumber,
                 status: 'ACTIVE'
             }
         })
@@ -102,6 +122,16 @@ export class UserRepository {
             data: {
                 userId: userId,
                 roleId: roleId
+            }
+        })
+    }
+
+    async createAdressUser(userId: string, addressData: UserAddress) {
+        return await prisma.address.create({
+            data: {
+                ...addressData,
+                userId: userId,
+                typeAddress: AddressType.USER
             }
         })
     }

@@ -1,7 +1,8 @@
 import { AuthRequest } from '@app/middlewares/global_middleware'
 import { Request, Response } from 'express';
-import {createUserZode, emailZode} from '@app/models/User_models'
+import {createUserZode, emailZode, UserAdressZode } from '@app/models/User_models'
 import UserService from '@app/services/user_services';
+import { AddressType } from '@prisma/client';
 
 class userController {
 
@@ -150,6 +151,27 @@ class userController {
             }
             const user = await UserService.getMe(userId);
             return res.status(200).json(user);
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async createAddress(req: AuthRequest, res: Response) {
+        const userId = req.userId!;
+        const addressData = UserAdressZode.safeParse(req.body);
+        if (!addressData.success) {
+            return res.status(400).json({
+                message: "Invalid address data",
+                errors: addressData.error.errors,
+            });
+        }
+
+        try {
+            const address = await UserService.createUserAddress(userId, addressData.data);
+            return res.status(201).json(address);
         } catch (error: any) {
             const statusCode = error.status || 500;
             return res.status(statusCode).json({

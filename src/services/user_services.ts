@@ -1,14 +1,16 @@
 import userRepository from '@app/repositories/user_repository';
-import { createUserDTOS } from '@app/models/User_models';
-import { logger, CustomError } from '@app/utils/logger';
-import { convertDateToDatabase, convertDateToUser , validationCpf, verifyBirthDate } from '@app/utils/basicFunctions'
+import { createUserDTOS, UserAddress } from '@app/models/User_models';
 import { dataSave, delData, getData } from '@app/models/redis_models';
+
+import { logger, CustomError } from '@app/utils/logger';
+import { convertDateToDatabase, convertDateToUser, validationCpf, verifyBirthDate } from '@app/utils/basicFunctions'
 import { sendVerificationCodeToRedis, verifyCode } from '@app/utils/functionsToRedis';
+
 import {generateToken} from "@app/middlewares/global_middleware"
 
 import Queue from '@app/jobs/lib/queue'
 import bcrypt from 'bcrypt';
-import { UUID } from 'crypto';
+
 
 export class UserServices {
 
@@ -70,7 +72,7 @@ export class UserServices {
     async createUser(userData: createUserDTOS, confirmPassword: string) {
         logger.info("Initiating user registration process");
 
-        const { name, email, password, phoneNumber, cpf, birthDate, isEmailVerified } = userData;
+        const { name, email, password, phoneNumber, cpf, birthDate, isEmailVerified, preferences } = userData;
 
         if (password !== confirmPassword) {
             logger.warn("Passwords do not match");
@@ -81,6 +83,18 @@ export class UserServices {
         if (ValidCpf.status !== 200) {
             logger.warn(`Invalid CPF: ${cpf}`);
             throw new CustomError(ValidCpf.message, ValidCpf.status);
+        }
+
+        const existingUserByCpf = await userRepository.findUserByCpf(cpf);
+        if (existingUserByCpf) {
+            logger.warn(`User already exists`);
+            throw new CustomError("CPF already registered", 400);
+        }
+
+        const existingUserByPhone = await userRepository.findUserByPhoneNumber(phoneNumber);
+        if (existingUserByPhone) {
+            logger.warn(`User already exists`);
+            throw new CustomError("Phone number already registered", 400);
         }
 
         const formattedBirthDate = await convertDateToDatabase(birthDate);
@@ -101,6 +115,7 @@ export class UserServices {
             cpf,
             birthDate: new Date(formattedBirthDate).toISOString(),
             isEmailVerified: isEmailVerified,
+            preferences: preferences,
         };
 
 
@@ -181,6 +196,36 @@ export class UserServices {
             isPhoneVerified: user.isPhoneVerified,
             status: user.status,
         };
+    }
+
+    async createUserAddress(userId: string, AddressData: UserAddress) {
+        logger.info('Creating user address');
+
+        if (!userId || !AddressData) {
+            logger.warn("User ID and address data are required");
+            throw new CustomError("User ID and address data are required", 400);
+        }
+
+        const address = await userRepository.createAdressUser(userId, AddressData);
+        if (!address) {
+            logger.error("Failed to create user address");
+            throw new CustomError("Failed to create user address", 500);
+        }
+
+        logger.info("User address created successfully");
+        return {
+            message: "User address created successfully",
+            address: {
+                street: address.street,
+                number: address.number,
+                complement: address.complement,
+                neighborhood: address.neighborhood,
+                city: address.city,
+                state: address.state,
+                postalCode: address.postalCode,
+                country: address.country,
+            }
+        }
     }
 }
 
