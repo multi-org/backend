@@ -22,6 +22,26 @@ export class UserRepository {
         return user;
     }
 
+    async findUserByCpf(cpf: string) {
+        const user = await prisma.user.findFirst({
+            where: {
+                cpf: cpf,
+                status: 'ACTIVE'
+            }
+        })
+        return user;
+    }
+
+    async findUserByPhoneNumber(phoneNumber: string) {
+        const user = await prisma.user.findFirst({
+            where: {
+                phoneNumber: phoneNumber,
+                status: 'ACTIVE'
+            }
+        })
+        return user;
+    }
+
     async findUserById(userId: string) {
         const user = await prisma.user.findUnique({
             where: {

@@ -85,6 +85,18 @@ export class UserServices {
             throw new CustomError(ValidCpf.message, ValidCpf.status);
         }
 
+        const existingUserByCpf = await userRepository.findUserByCpf(cpf);
+        if (existingUserByCpf) {
+            logger.warn(`User already exists`);
+            throw new CustomError("CPF already registered", 400);
+        }
+
+        const existingUserByPhone = await userRepository.findUserByPhoneNumber(phoneNumber);
+        if (existingUserByPhone) {
+            logger.warn(`User already exists`);
+            throw new CustomError("Phone number already registered", 400);
+        }
+
         const formattedBirthDate = await convertDateToDatabase(birthDate);
 
         const isBirthDateValid = await verifyBirthDate(formattedBirthDate);
