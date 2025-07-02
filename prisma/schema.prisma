@@ -241,7 +241,7 @@ model Address{
   neighborhood    String   @db.VarChar(100)
   city            String   @db.VarChar(100)
   state           String   @db.VarChar(100)
-  postalCode      String   @db.VarChar(20)
+  zipCode         String   @db.VarChar(20)
   country         String   @db.VarChar(100)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now()) @updatedAt

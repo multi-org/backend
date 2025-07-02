@@ -216,13 +216,13 @@ export class UserServices {
         return {
             message: "User address created successfully",
             address: {
-                street: address.street,
-                number: address.number,
-                complement: address.complement,
-                neighborhood: address.neighborhood,
-                city: address.city,
-                state: address.state,
-                postalCode: address.postalCode,
+                Rua: address.street,
+                Numero: address.number,
+                Complemento: address.complement,
+                Bairro: address.neighborhood,
+                Cidade: address.city,
+                Estado: address.state,
+                Cep: address.zipCode,
                 country: address.country,
             }
         }
