@@ -40,7 +40,7 @@ export interface UserAddress {
   neighborhood: string;
   city: string;
   state: string;
-  postalCode: string;
+  zipCode: string;
   country: string;
 }
 
@@ -51,7 +51,7 @@ export const UserAdressZode = z.object({
   neighborhood: z.string().min(1, "Neighborhood is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
-  postalCode: z.string().min(1, "Postal code is required"),
+  zipCode: z.string().min(1, "Zip code is required"),
   country: z.string().min(1, "Country is required"),
 });
 

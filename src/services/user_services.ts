@@ -222,7 +222,7 @@ export class UserServices {
                 neighborhood: address.neighborhood,
                 city: address.city,
                 state: address.state,
-                postalCode: address.postalCode,
+                Cep: address.zipCode,
                 country: address.country,
             }
         }
