@@ -71,6 +71,7 @@ model User {
   cpf             String     @db.VarChar(255)
   birthDate       DateTime   @db.Date
   status          Status     @default(ACTIVE)
+  preferences     Int[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @default(now()) @updatedAt
 

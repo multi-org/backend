@@ -72,7 +72,7 @@ export class UserServices {
     async createUser(userData: createUserDTOS, confirmPassword: string) {
         logger.info("Initiating user registration process");
 
-        const { name, email, password, phoneNumber, cpf, birthDate, isEmailVerified } = userData;
+        const { name, email, password, phoneNumber, cpf, birthDate, isEmailVerified, preferences } = userData;
 
         if (password !== confirmPassword) {
             logger.warn("Passwords do not match");
@@ -115,6 +115,7 @@ export class UserServices {
             cpf,
             birthDate: new Date(formattedBirthDate).toISOString(),
             isEmailVerified: isEmailVerified,
+            preferences: preferences,
         };
 
 

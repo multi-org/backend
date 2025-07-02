@@ -17,6 +17,7 @@ export const createUserZode = z.object({
     const parsedDate = new Date(date);
     return !isNaN(parsedDate.getTime());
   }, "Invalid date format"),
+  preferences: z.number().array()
 });
 
 export interface createUserDTOS {
@@ -27,6 +28,7 @@ export interface createUserDTOS {
   cpf: string;
   birthDate: string;
   isEmailVerified: boolean;
+  preferences: number[];
 }
 
 export interface UserAddress {
