@@ -2,7 +2,9 @@ import { AuthRequest } from '@app/middlewares/global_middleware'
 import { Request, Response } from 'express';
 import {createUserZode, emailZode, UserAdressZode } from '@app/models/User_models'
 import UserService from '@app/services/user_services';
-import { AddressType } from '@prisma/client';
+import { dataSave, delData, getData } from '@app/models/redis_models';
+import { randomUUID } from 'crypto';
+
 
 class userController {
 
@@ -18,15 +20,17 @@ class userController {
         try {
             const response = await UserService.sendCodeToEmail(email);
 
-            res.cookie('email', response.email, {
+            const verificationToken = randomUUID();
+            await dataSave({ prefix: 'email_verification', key: verificationToken, value: response, ttl: 60 * 60}); 
+            res.cookie('verification_token', verificationToken, {
                 httpOnly: true,
-                maxAge: 60 * 60 * 1000,
+                maxAge: 60 * 60 * 1000, // 1 hora
                 secure: process.env.NODE_ENV === 'production',
                 sameSite: 'lax',
                 path: '/'
             });
 
-            return res.status(200).json(response);
+            return res.status(200).json(response.message);
         } catch (error: any) {
             const statusCode = error.status || 500;
             return res.status(statusCode).json({
@@ -36,21 +40,32 @@ class userController {
     }
 
     async validEmail(req: AuthRequest, res: Response) {
-        const { email } = req.cookies;
-        if (!email) {
-            return res.status(500).json({ message: "Email not found in cookies" });
+        const { verification_token } = req.cookies;
+        if (!verification_token) {
+            return res.status(500).json({ message: "Verification token not found in cookies" });
         }
         
         try {
+            const { email } = await getData('email_verification', verification_token);
+            if (!email) {
+                return res.status(400).json({ message: "Invalid or expired email verification" });
+            }
+
             const result = await UserService.validEmail(email, req.body);
 
-            res.cookie('codeValidation', true, {
+            const userCreationToken = randomUUID();
+            await dataSave({ prefix: 'user_creation', key: userCreationToken, value: email, ttl: 60 * 60 });
+            await delData('email_verification', verification_token);
+
+            res.cookie('user_creation_token', userCreationToken, {
                 httpOnly: true,
                 maxAge: 60 * 60 * 1000, // 1 hora
                 secure: process.env.NODE_ENV === 'production',  
                 sameSite: 'lax',
                 path: '/'
             });
+
+            res.clearCookie("verification_token", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
             
             return res.status(200).json(result.message);
         } catch (error: any) {
@@ -63,12 +78,14 @@ class userController {
 
     async createUser(req: Request, res: Response) {
         const result = createUserZode.safeParse(req.body);
-        const email = req.cookies.email;
-        if (!email) {
-            return res.status(500).json({ message: "Email not found in cookies" });
+        const {user_creation_token} = req.cookies;
+        if (!user_creation_token) {
+            return res.status(500).json({ message: "User creation token not found in cookies" });
         }
-        if (!req.cookies.codeValidation) {
-            return res.status(400).json({ message: "Email validation code not verified" });
+        
+        const email = await getData('user_creation', user_creation_token);
+        if (!email) {
+            return res.status(400).json({ message: "Invalid or expired user creation token" });
         }
 
         if (!result.success) {
@@ -85,7 +102,9 @@ class userController {
                 email: email
             }, req.body.confirmPassword);
 
-            res.clearCookie("email", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
+            await delData('user_creation', user_creation_token);
+
+            res.clearCookie("user_creation_token", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
 
             res.cookie("token", user.token, {
                 httpOnly: true,
@@ -136,8 +155,8 @@ class userController {
 
     async logout(req: Request, res: Response) {
         res.clearCookie("token", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
-        res.clearCookie("email", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
-        res.clearCookie("codeValidation", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
+        res.clearCookie("user_creation_token", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
+        res.clearCookie("verification_token", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
         return res.status(200).json({ message: "Logout successful" });
     }
 

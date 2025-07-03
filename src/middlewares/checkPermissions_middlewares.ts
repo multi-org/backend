@@ -78,7 +78,7 @@ export const checkCompanyPermission = (requiredPermission: string) => {
                 throw new CustomError('User not found', 404);
             }
 
-            const isSystemAdmin = user.userRoles?.some(r => r.role.name === 'system_admin');
+            const isSystemAdmin = user.userRoles?.some(r => r.role.name === 'adminUser');
             if (isSystemAdmin) {
                 logger.info(`RBAC: System admin autorizado para ${requiredPermission}.`);
                 return next();
