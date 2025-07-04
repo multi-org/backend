@@ -10,16 +10,27 @@ export class EnterpriseRepository {
         const enterprise = await prisma.enterprise.create({
             data: {
                 ...rest,
-                legalRepresentatives: legalRepresentatives
-                    ? {
-                        create: legalRepresentatives.map((rep: any) => ({
-                            idRepresentative: rep.idRepresentative,
-                            user: rep.userId
-                        }))
-                    }
-                    : undefined
+                legalRepresentatives: {
+                    create: legalRepresentatives.map((rep: any) => ({
+                        user: {
+                            connect: { userId: rep.idRepresentative }
+                        }
+                    }))
+                }
+         
             }
         });
+        return enterprise;
+    }
+
+    async findEnterpriseByCnpj(cnpj: string) {
+        const enterprise = await prisma.enterprise.findFirst({
+            where: {
+                cnpj: cnpj,
+                status: 'ACTIVE'
+            },
+        });
+
         return enterprise;
     }
 
