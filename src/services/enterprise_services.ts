@@ -19,10 +19,16 @@ class EnterpriseServices {
             throw new CustomError(isValidCnpj.message, isValidCnpj.status);
         }
 
-        const existingEnterprise = await enterpriseRepository.findEnterpriseByEmail(enterpriseData.email);
-        if (existingEnterprise) {
+        const existingEnterpriseWithEmail = await enterpriseRepository.findEnterpriseByEmail(enterpriseData.email);
+        if (existingEnterpriseWithEmail) {
             logger.warn(`Enterprise already exists`);
             throw new CustomError("Email already registered", 400);
+        }
+
+        const existingEnterpriseWithCnpj = await enterpriseRepository.findEnterpriseByCnpj(enterpriseData.cnpj);
+        if (existingEnterpriseWithCnpj) {
+            logger.warn(`Enterprise with CNPJ ${enterpriseData.cnpj} already exists`);
+            throw new CustomError("CNPJ already registered", 400);
         }
 
         const newEnterprise = await enterpriseRepository.createEnterprise({ ...enterpriseData });
