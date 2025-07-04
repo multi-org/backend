@@ -125,7 +125,7 @@ export class UserServices {
             throw new CustomError("Failed to create user in the database", 500);
         }
 
-        const defaultRoleName = await userRepository.findUserRoleByName('company_user');
+        const defaultRoleName = await userRepository.findUserRoleByName('commonUser');
         if (!defaultRoleName) {
             logger.error("Default role not found");
             throw new CustomError("Default role not found", 500);
