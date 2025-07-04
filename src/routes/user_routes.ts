@@ -10,5 +10,6 @@ userRoutes.post('/create', userController.createUser);
 userRoutes.post('/login', userController.login);
 userRoutes.post('/logout', jwtRequired, userController.logout);
 userRoutes.get('/me', jwtRequired, userController.getMe);
+userRoutes.post('/address', jwtRequired, userController.createAddress);
 
 export default userRoutes;

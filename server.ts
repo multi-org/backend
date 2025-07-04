@@ -1,17 +1,6 @@
 import "dotenv/config";
 import app from "./src/app";
-import cors from 'cors';
 import './src/jobs/init.ts';
-
-// configuração do cors
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:5173"],
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-  credentials: true,
-  optionsSuccessStatus: 204,
-};
-
-app.use(cors(corsOptions));
 
 const PORT = process.env.PORT || 8083;
 

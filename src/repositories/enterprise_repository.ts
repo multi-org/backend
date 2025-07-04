@@ -13,7 +13,8 @@ export class EnterpriseRepository {
                 legalRepresentatives: legalRepresentatives
                     ? {
                         create: legalRepresentatives.map((rep: any) => ({
-                            idRepresentative: rep.idRepresentative
+                            idRepresentative: rep.idRepresentative,
+                            user: rep.userId
                         }))
                     }
                     : undefined
@@ -25,7 +26,7 @@ export class EnterpriseRepository {
     async findEnterpriseByEmail(email: string) {
         const enterprise = await prisma.enterprise.findFirst({
             where: {
-                enterpriseEmail: email,
+                email: email,
                 status: 'ACTIVE'
             },
         });
