@@ -8,7 +8,6 @@ export interface AuthRequest extends Request {
     email?: string;
 }
 
-
 export const generateToken = async (userId: string, email: string) => {
     const secret = process.env.SECRETJWT;
     if (!secret) {
@@ -19,6 +18,16 @@ export const generateToken = async (userId: string, email: string) => {
         { expiresIn: 21600 } // 6 horas
     );
 };
+
+export const generateInviteToken = async (userId: string, enterpriseId: string, role: string) => {
+    const token =  jwt.sign(
+        { userId: userId, enterpriseId: enterpriseId, role: role },
+        process.env.SECRETJWT!,
+        { expiresIn: '3d' } // 3 dias
+    );
+
+    return `http://localhost:8083/companies/invite/accept?token=${token}`; // mudar aqui quando tiver a rota do frontend - por enquanto vai chamar a rota do back direto
+}
 
 export const jwtRequired = (req: AuthRequest, res: Response, next: NextFunction) => {
     const token = req.cookies.token;

@@ -55,6 +55,13 @@ export async function permissions() {
       resource: 'company',
       description: 'Allows managing company settings and users',
     },
+    
+    // Convidar representante legal
+    {
+      action: 'invite',
+      resource: 'legal_representative',
+      description: 'Allows inviting a legal representative to the company',
+    },
 
     // CRUD Filiais
     {
