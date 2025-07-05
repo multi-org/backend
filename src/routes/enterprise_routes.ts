@@ -8,4 +8,7 @@ enterpriseRoutes.post('/', jwtRequired, checkPermission('create:company'), enter
 enterpriseRoutes.get('/:companyId', jwtRequired, checkPermission('read:company'), enterpriseController.findEnterpriseById);
 enterpriseRoutes.get('/all', jwtRequired, checkCompanyPermission('read:company'));
 
+enterpriseRoutes.get('/invite/accept', jwtRequired, enterpriseController.acceptInvite);
+enterpriseRoutes.post('/invite/:companyId', jwtRequired, checkPermission('invite:legal_representative'), enterpriseController.inviteLegalRepresentative);
+
 export default enterpriseRoutes;

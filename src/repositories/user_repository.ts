@@ -107,16 +107,6 @@ export class UserRepository {
         return user;
     }
 
-    async findUserRoleByName(name: string) {
-        const role = await prisma.role.findFirst({
-            where: {
-                name: name
-            }
-        })
-
-        return role;
-    }
-
     async assignRoleToUser(userId: string, roleId: number) { 
         return await prisma.userRole.create({
             data: {
@@ -134,6 +124,31 @@ export class UserRepository {
                 typeAddress: AddressType.USER
             }
         })
+    }
+
+    async findUserRole(userId: string) {
+        const userRole = await prisma.userRole.findFirst({
+            where: {
+                userId: userId
+            }
+        })
+        return userRole;
+    }
+    
+    async updateRoleUser(userId: string, role: number, userRole: number) {
+        const user = await prisma.userRole.update({
+            where: {
+                userId_roleId: {
+                    userId: userId,
+                    roleId: userRole
+                }
+            },
+            data: {
+                roleId: role
+            }
+        });
+
+        return user;
     }
 
 }
