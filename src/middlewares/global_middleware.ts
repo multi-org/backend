@@ -49,17 +49,17 @@ export const jwtRequired = (req: AuthRequest, res: Response, next: NextFunction)
             logger.warn(`Token JWT inválido recebido: ${error.message}`);
 
             res.clearCookie('jwt', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' } );
-            return next(new CustomError('Sessão inválida. Por favor, faça login novamente.', 401));
+            return res.status(401).json({ message: 'Sessão inválida. Por favor, faça login novamente.' });
         } 
         
         if (error.name === 'TokenExpiredError') {
             logger.info(`Token JWT expirado para usuário.`);
             
             res.clearCookie('jwt', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' } );
-            return next(new CustomError('Sua sessão expirou. Por favor, faça login novamente.', 401));
+            return res.status(401).json({ message: 'Sua sessão expirou. Por favor, faça login novamente.' });
         }
             
         logger.error(`Erro inesperado na verificação do JWT: ${error.message}`);
-        return next(new CustomError('Erro interno durante a autenticação.', 500));
+        return res.status(500).json({ message: 'Erro interno durante a autenticação.' });
     }
 };

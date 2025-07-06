@@ -1,4 +1,5 @@
 import userRepository from '@app/repositories/user_repository';
+import enterpriseRepository from '@app/repositories/enterprise_repository';
 import { createUserDTOS, UserAddress } from '@app/models/User_models';
 import { dataSave, delData, getData } from '@app/models/redis_models';
 
@@ -125,7 +126,7 @@ export class UserServices {
             throw new CustomError("Failed to create user in the database", 500);
         }
 
-        const defaultRoleName = await userRepository.findUserRoleByName('commonUser');
+        const defaultRoleName = await enterpriseRepository.findRoleByName('commonUser');
         if (!defaultRoleName) {
             logger.error("Default role not found");
             throw new CustomError("Default role not found", 500);
@@ -159,7 +160,7 @@ export class UserServices {
         const isPasswordValid = await bcrypt.compare(password, user.password);
         if (!isPasswordValid) {
             logger.warn("Invalid password");
-            throw new CustomError("Invalid password", 401);
+            throw new CustomError("Invalid password", 422);
         }
 
         const token = await generateToken(user.userId, email);
