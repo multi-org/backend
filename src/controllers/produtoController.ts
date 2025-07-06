@@ -1,29 +1,13 @@
-import produto from "../models/Produto";
-import { Request, Response } from "express";
-import mongoose from "mongoose";
+import {validateProductCreation} from "../models/Product_models";
+import { AuthRequest } from "@app/middlewares/global_middleware";
+import { Response } from "express";
+
 
 class ProdutoController {
-  static async listarProdutos(req: Request, res: Response) {
-    try {
-      const { nome } = req.query;
-
-      if (nome === "") {
-        return res.status(400).json({ error: '"nome" não pode ser vazio!' });
-      }
-
-      const produtos = nome
-        ? await produto.find({
-            nome: { $regex: new RegExp(nome as string, "i") },
-          })
-        : await produto.find({});
-
-      return res.status(200).json(produtos);
-    } catch (error) {
-      return res.status(500).json({ error: (error as Error).message });
-    }
+  static async listarProdutos(req: AuthRequest, res: Response) {
   }
 
-  static async listarProdutoPorNomeOuId(req: Request, res: Response) {
+  static async listarProdutoPorNomeOuId(req: AuthRequest, res: Response) {
     try {
       const { nome, id } = req.query;
 
@@ -111,7 +95,7 @@ class ProdutoController {
       const produtoAtualizado = await produto.findByIdAndUpdate(
         id,
         { nome, descricao, categoria, disponibilidade, preco },
-        { new: true, runValidators: true },
+        { new: true, runValidators: true }
       );
 
       if (!produtoAtualizado) {

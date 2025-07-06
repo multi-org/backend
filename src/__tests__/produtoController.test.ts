@@ -1,7 +1,7 @@
 import request from "supertest";
 import express, { Application } from "express";
 import ProdutoController from "../controllers/produtoController";
-import produto from "../models/Produto";
+import produto from "../models/Product_models";
 
 const app: Application = express();
 app.use(express.json());
@@ -47,7 +47,7 @@ describe("ProdutoController", () => {
     it("Lista um produto pelo ID", async () => {
       (produto.findById as jest.Mock).mockResolvedValue(produtoMock);
       const res = await request(app).get(
-        "/produtos/nomeOuId?id=66ff0f00e961f5caede885b4",
+        "/produtos/nomeOuId?id=66ff0f00e961f5caede885b4"
       );
       expect(res.status).toBe(200);
       expect(res.body).toEqual(produtoMock);
@@ -56,7 +56,7 @@ describe("ProdutoController", () => {
     it("Retorna 404 se o produto não for encontrado pelo ID", async () => {
       (produto.findById as jest.Mock).mockResolvedValue(null);
       const res = await request(app).get(
-        "/produtos/nomeOuId?id=66ff0f00e961f5caede885b5",
+        "/produtos/nomeOuId?id=66ff0f00e961f5caede885b5"
       );
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: "Produto não encontrado!" });
@@ -95,7 +95,7 @@ describe("ProdutoController", () => {
       const produtoAtualizado = { nome: "Produto Atualizado", preco: 200 };
 
       (produto.findByIdAndUpdate as jest.Mock).mockResolvedValue(
-        produtoAtualizado,
+        produtoAtualizado
       );
       const res = await request(app)
         .put("/produtos/66ff0f00e961f5caede885b4")
@@ -128,7 +128,7 @@ describe("ProdutoController", () => {
     it("Deleta um produto com sucesso pelo ID", async () => {
       (produto.findByIdAndDelete as jest.Mock).mockResolvedValue(true);
       const res = await request(app).delete(
-        "/produtos/66ff0f00e961f5caede885b4",
+        "/produtos/66ff0f00e961f5caede885b4"
       );
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ message: "Produto excluído com sucesso!" });
@@ -137,7 +137,7 @@ describe("ProdutoController", () => {
     it("Retorna 404 se o produto não for encontrado", async () => {
       (produto.findByIdAndDelete as jest.Mock).mockResolvedValue(null);
       const res = await request(app).delete(
-        "/produtos/66ff0f00e961f5caede885b4",
+        "/produtos/66ff0f00e961f5caede885b4"
       );
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: "Produto não encontrado!" });
@@ -163,7 +163,7 @@ describe("ProdutoController", () => {
 
       (produto.findById as jest.Mock).mockResolvedValue(null);
       const res = await request(app).get(
-        "/produtos/nomeOuId?id=66ff0f00e961f5caede885b4",
+        "/produtos/nomeOuId?id=66ff0f00e961f5caede885b4"
       );
       expect(res.status).toBe(404);
       expect(res.body).toEqual({ error: "Produto não encontrado!" });
@@ -173,7 +173,7 @@ describe("ProdutoController", () => {
   describe("Erro interno do servidor", () => {
     it("Retorna 500 ao listar produtos se algo der errado", async () => {
       (produto.find as jest.Mock).mockRejectedValue(
-        new Error("Erro ao buscar produtos"),
+        new Error("Erro ao buscar produtos")
       );
       const res = await request(app).get("/produtos");
       expect(res.status).toBe(500);
@@ -182,7 +182,7 @@ describe("ProdutoController", () => {
 
     it("Retorna 500 ao criar um produto se algo der errado", async () => {
       (produto.create as jest.Mock).mockRejectedValue(
-        new Error("Erro ao criar produto"),
+        new Error("Erro ao criar produto")
       );
       const res = await request(app)
         .post("/produtos")

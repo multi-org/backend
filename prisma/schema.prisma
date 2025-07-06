@@ -60,6 +60,12 @@ enum AddressType {
   SUBSIDIARY @map("filial")
   @@schema("multi")
 }
+enum OwnerType {
+  USER       @map("usuário")
+  ENTERPRISE @map("empresa")
+  SUBSIDIARY @map("filial")
+  @@schema("multi")
+}
 
 model User {
   userId          String     @unique @id @default(uuid()) @db.Uuid
@@ -284,25 +290,67 @@ model Payment {
 
 model Product {
   id            String      @id @default(uuid()) @db.Uuid
-  ownerId       String      @db.Uuid // Quem é o proprietário/anunciante do produto (User ou Enterprise/Subsidiary)
-  ownerType     String      @db.VarChar(50) // 'USER', 'ENTERPRISE', 'SUBSIDIARY' 
-  name          String      @db.VarChar(255)
-  description   String?     @db.VarChar(1000)
+  title         String      @db.VarChar(255) // Título do produto
+  description   String      @db.VarChar(300)
+  ownerId       String      @db.Uuid 
+  ownerType     OwnerType
   type          ProductType
   basePrice     Decimal     @db.Decimal(10, 2) 
+  unity         String?    @db.VarChar(50) // Unidade de medida, ex: "hora", "dia", "mês"
+  category      String      @db.VarChar(500)
   imagesUrls    String[]    @default([]) @db.VarChar(1000)
   status        Status      @default(ACTIVE) 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
-  rents         Rent[]
-  User User[]
-  Enterprise Enterprise[]
-  Subsidiary Subsidiary[]
-  ProductAvailability ProductAvailability[]
+  rents                   Rent[]
+  users                   User[]
+  enterprises             Enterprise[]
+  subsidiaries            Subsidiary[]
+  productAvailability     ProductAvailability[]
+
+  spaceProduct            SpaceProduct? 
+  servicesProduct         ServicesProduct?
+  equipamentProduct       EquipamentProduct?
 
   @@map("products")  
   @@schema("multi")
+}
+
+model SpaceProduct{
+  id            String      @id @default(uuid()) @db.Uuid
+  productId    String      @unique @db.Uuid
+  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  capacity     Int        
+  area         Float
+
+  @@schema("multi")
+  @@map("space_products")
+}
+
+model ServicesProduct{
+  id            String      @id @default(uuid()) @db.Uuid
+  productId     String      @unique@db.Uuid
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  duration      DateTime?   @db.Time(0) 
+  requirements  String?     @db.VarChar(500)
+  
+
+  @@schema("multi")
+  @@map("services_products")
+}
+
+model EquipamentProduct{
+  id             String      @id @default(uuid()) @db.Uuid
+  productId      String      @unique @db.Uuid
+  product        Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  brand          String?     @db.VarChar(100)
+  model          String?     @db.VarChar(100)
+  specifications String?     @db.VarChar(1000)
+  stock          Int         @default(0) // Quantidade disponível em estoque
+
+  @@schema("multi")
+  @@map("equipment_products")
 }
 
 model Rent {
