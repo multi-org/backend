@@ -1,4 +1,4 @@
-import {validateProductCreation, ProductDtos} from "../models/Product_models";
+import {validateProductCreation, ProductCreateInput} from "../models/Product_models";
 import { AuthRequest } from "@app/middlewares/global_middleware";
 import { Response, Request} from "express";
 
@@ -10,18 +10,19 @@ class ProdutoController {
     if (!response.success) {
       return res.status(400).json({
         message: "Validation failed",
-        errors: response.error?.flatten().fieldErrors || {},
+        errors: response.error.flatten().fieldErrors || {},
       });
     }
 
     try {
-        const { ownerId } = req.params;
-        const productData = {
-          ...response.data,
-          ownerId: ownerId,
-        } as ProductDtos;
+      const userId = req.userId!;
+      const { ownerId } = req.params;
+      
+      const productData: ProductCreateInput = {
+        ...response.data,
+      }
 
-      const createProduct = await productServices.createProduct(productData);
+      const createProduct = await productServices.createProduct(productData, ownerId, userId);
 
       return res.status(200).json(createProduct)
 

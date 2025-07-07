@@ -5,8 +5,8 @@ const prisma = new PrismaClient();
 
 export class ProductsRepository {
 
-    async createProduct(productData: ProductCreateInput) { 
-        const { title, description, type, basePrice, category, imagesUrls, ownerId, ownerType, unity } = productData;
+    async createProduct(productData: ProductCreateInput, userId: string, ownerId: string) { 
+        const { title, description, type, basePrice, category, imagesUrls, ownerType, unity  } = productData;
         
         const result = await prisma.$transaction(async (tx) => {
             const product = await tx.product.create({
@@ -19,7 +19,8 @@ export class ProductsRepository {
                     imagesUrls,
                     ownerId,
                     ownerType,
-                    unity
+                    unity,
+                    createdBy: userId,
                 },
             });
 
@@ -37,12 +38,12 @@ export class ProductsRepository {
                     break;
                 
                 case "SERVICE":
-                    const { duration, requirements } = productData.serviceDetails;
+                    const { durationMinutes, requirements } = productData.serviceDetails;
                     
                     specificProduct = await tx.servicesProduct.create({
                         data: {
                             productId: product.id,
-                            duration: duration ? new Date(`1970-01-01T${duration}`) : undefined, // Convert duration to DateTime
+                            durationMinutes: durationMinutes,
                             requirements: requirements
                         },
                     });

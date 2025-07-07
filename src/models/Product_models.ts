@@ -6,8 +6,9 @@ const productSchemaZod = z.object({
   type: z.enum(["SPACE", "SERVICE", "EQUIPAMENT"]),
   basePrice: z.number().min(0, "Preço base não pode ser negativo"),
   category: z.string().max(500, "Categoria deve ter no máximo 500 caracteres"),
-  imagesUrls: z.array(z.string().optional()),
-  ownerType: z.enum(["USER", "ENTERPRISE", "SUBSIDIARY"]),
+  imagesUrls: z.array(z.string()),
+  ownerType: z.enum(["ENTERPRISE", "SUBSIDIARY"]),
+  unity: z.enum(["UNIDADE", "HORA", "DIARIA"]).optional().default("UNIDADE"),
 });
 
 const spaceProductSchema = z.object({
@@ -27,80 +28,64 @@ const equipmentProductSchema = z.object({
   stock: z.number().int().min(0, "Estoque não pode ser negativo").default(0), 
 });
 
-export function validateProductCreation(data: any) {
+export type ProductCreateInput = z.infer<typeof productSchemaZod> & (
+  { type: "SPACE"; spaceDetails: z.infer<typeof spaceProductSchema> } |
+  { type: "SERVICE"; serviceDetails: z.infer<typeof serviceProductSchema> } |
+  { type: "EQUIPAMENT"; equipmentDetails: z.infer<typeof equipmentProductSchema> }
+);
 
-  const baseResult = productSchemaZod.safeParse(data);
+export function validateProductCreation(data: any):
+  { success: true; data: ProductCreateInput } |
+  { success: false; error: z.ZodError } {
+    const baseResult = productSchemaZod.safeParse(data);
   if (!baseResult.success) {  
     return baseResult;
   }
 
   const base = baseResult.data;
-
   let specificResult;
+  let combineData: any = { ...base };
   switch (base.type) {
     case "SPACE":
       specificResult = spaceProductSchema.safeParse(data);
+      if (specificResult.success) {
+        combineData.spaceDetails = specificResult.data;
+      }
       break;
     case "SERVICE":
       specificResult = serviceProductSchema.safeParse(data);
+      if (specificResult.success) {
+        combineData.serviceDetails = specificResult.data;
+      }
       break;
     case "EQUIPAMENT":
       specificResult = equipmentProductSchema.safeParse(data);
+      if (specificResult.success) {
+        combineData.equipmentDetails = specificResult.data;
+      }
       break;
     default:
       return {
         success: false,
-        error: {
-          flatten: () => ({
-            fieldErrors: { type: ["Tipo de produto Inválido"] }
-          })
-        }
+        error: new z.ZodError([{
+          code: z.ZodIssueCode.custom,
+          path: ["type"],
+          message: "Tipo de produto inválido"
+        }])
+        
       };
   }
 
-  if(!specificResult.success) return specificResult;
-  
+  if (!specificResult || !specificResult.success) {
+    const errors = specificResult ? specificResult.error.issues : [];
+    return {
+      success: false,
+      error: new z.ZodError(errors)
+    };
+  }
 
   return {
     success: true,
-    data: {
-      ...base,
-      ...specificResult
-    }
+    data: combineData as ProductCreateInput
   };
 }
-
-export interface ProductDtos { 
-  title: string;
-  description: string;
-  ownerId: string;
-  ownerType: "ENTERPRISE" | "SUBSIDIARY";
-  type: "SPACE" | "EQUIPAMENT" | "SERVICE";
-  basePrice: number;
-  unity?: string;
-  category: string;
-  imagesUrls: string[];
-}
-
-export interface ServiceProductCreateDto{
-  duration?: string; // Pode ser uma string representando o tempo, ex: "01:00:00"
-  requirements?: string;
-}
-
-export interface SpaceProductCreateDto {
-  capacity: number;
-  area: number;
-}
-
-export interface EquipmentProductCreateDto {
-  brand?: string;
-  model?: string;
-  specifications?: string;
-  stock: number;
-}
-
-export type ProductCreateInput = ProductDtos & (
-  | { type: "SPACE"; spaceDetails: SpaceProductCreateDto }
-  | { type: "SERVICE"; serviceDetails: ServiceProductCreateDto }
-  | { type: "EQUIPAMENT"; equipmentDetails: EquipmentProductCreateDto }
-);

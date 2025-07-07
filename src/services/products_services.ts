@@ -1,16 +1,17 @@
 import { logger, CustomError } from "@app/utils/logger";
 import { ProductCreateInput } from "@app/models/Product_models";
+
 import productRepository from "@app/repositories/products_repository";
 import enterpriService from './enterprise_services';
 
 class ProductsServices {
-    async createProduct(productData: ProductCreateInput) {
+    async createProduct(productData: ProductCreateInput, ownerId: string, userId: string) {
         logger.info("Starting product creation process");
 
         let owner: any;
         switch (productData.ownerType) {
             case "ENTERPRISE":
-                owner = await enterpriService.findEnterpriseById(productData.ownerId);
+                owner = await enterpriService.findEnterpriseById(ownerId);
                 break;
             case "SUBSIDIARY":
 
@@ -25,7 +26,7 @@ class ProductsServices {
             throw new CustomError("Product with this title already exists for this enterprise", 400);
         }
 
-        const created = await productRepository.createProduct(productData);
+        const created = await productRepository.createProduct(productData, userId, ownerId);
         if (!created) {
             logger.error("Product creation failed");
             throw new CustomError("Product creation failed", 500);
