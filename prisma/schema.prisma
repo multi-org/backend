@@ -61,7 +61,6 @@ enum AddressType {
   @@schema("multi")
 }
 enum OwnerType {
-  USER       @map("usuário")
   ENTERPRISE @map("empresa")
   SUBSIDIARY @map("filial")
   @@schema("multi")
@@ -90,7 +89,6 @@ model User {
   Address Address?
   rents Rent[]
   Payment Payment[]
-  products Product[]
   enterpriseUserRoles enterpriseUserRoles[]
 
   @@map("users")
@@ -157,37 +155,37 @@ model enterpriseUserRoles {
   id Int @id @default(autoincrement()) @db.Integer
   userId String @db.Uuid
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
-  enterpriseId String   @db.Uuid 
-  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  companyId String   @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   roleId Int
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
-  @@unique([userId, enterpriseId, roleId])
+  @@unique([userId, companyId, roleId])
   @@map("enterprise_user_roles")
   @@schema("multi")
 }
 
-model Enterprise {
-  id            String   @id @default(uuid()) @db.Uuid
-  name          String   @db.VarChar(100)
-  email         String   @db.VarChar(50)
-  cnpj           String   @db.VarChar(18)
+model Company {
+  id                    String   @id @default(uuid()) @db.Uuid
+  popularName           String   @db.VarChar(100)
+  email                 String   @db.VarChar(50)
+  cnpj                  String   @db.VarChar(18)
   phone                 String   @db.VarChar(20)        
   description           String?  @db.VarChar(1000)        
-  mission               String?  @db.VarChar(255)         
+  legalName             String?  @db.VarChar(255)         
   isMicroenterprise     Boolean  @default(false)         
   status                Status   @default(ACTIVE)
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @default(now()) @updatedAt
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @default(now()) @updatedAt
   associateDiscountRate Decimal  @default(0.0) @db.Decimal(5, 4) 
+  createdBy             String   @db.Uuid
 
   legalRepresentatives    LegalRepresentative[]
   CompanyAssociates       CompanyAssociate[]
   Address                 Address?
   subsidiaries            Subsidiary[]
-  products                Product[]
   enterpriseUserRoles enterpriseUserRoles[]
 
   @@map("enterprises")  
@@ -198,8 +196,8 @@ model Enterprise {
 
 model Subsidiary {
   id            String   @id @default(uuid()) @db.Uuid
-  enterpriseId  String   @db.Uuid
-  enterprise    Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  companyId    String   @db.Uuid
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   name         String?  @db.VarChar(100) 
   email        String?  @db.VarChar(50)  
   phone        String?  @db.VarChar(20)  
@@ -207,9 +205,9 @@ model Subsidiary {
   status       Status   @default(ACTIVE)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  createdBy    String   @db.Uuid
 
   Address Address?
-  products  Product[]
    
    @@map("subsidiaries")
    @@schema("multi")
@@ -217,8 +215,8 @@ model Subsidiary {
 
 
 model LegalRepresentative {
-  enterpriseId String     @db.Uuid
-  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  companyId String     @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId       String     @db.Uuid 
   user         User       @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
   createdAt    DateTime   @default(now())
@@ -226,20 +224,20 @@ model LegalRepresentative {
 
   @@map("legal_representatives")  
   @@schema("multi")
-  @@id([enterpriseId, userId])
+  @@id([companyId, userId])
 }
 
 model CompanyAssociate {
   userId                String  @db.Uuid
   user                  User     @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
   registrationNumber    String @db.VarChar(10)
-  enterpriseId          String   @db.Uuid
-  enterprise            Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  companyId            String   @db.Uuid
+  company              Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   createdAt             DateTime @default(now())
   updatedAt             DateTime @default(now()) @updatedAt
 
   @@schema("multi")
-  @@id([userId, enterpriseId])
+  @@id([userId, companyId])
   @@map("company_associates")
 }
 
@@ -260,8 +258,8 @@ model Address{
   userId          String?  @unique @db.Uuid
   user            User?    @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
 
-  enterpriseId    String?  @unique @db.Uuid
-  enterprise      Enterprise? @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  companyId    String?  @unique @db.Uuid
+  company      Company? @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   subsidiaryId    String?  @unique @db.Uuid
   subsidiary      Subsidiary? @relation(fields: [subsidiaryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -290,7 +288,7 @@ model Payment {
 
 model Product {
   id            String      @id @default(uuid()) @db.Uuid
-  title         String      @db.VarChar(255) // Título do produto
+  title         String      @db.VarChar(255) 
   description   String      @db.VarChar(300)
   ownerId       String      @db.Uuid 
   ownerType     OwnerType
@@ -302,14 +300,12 @@ model Product {
   status        Status      @default(ACTIVE) 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  createdBy     String      @db.Uuid
 
   rents                   Rent[]
-  users                   User[]
-  enterprises             Enterprise[]
-  subsidiaries            Subsidiary[]
   productAvailability     ProductAvailability[]
 
-  spaceProduct            SpaceProduct? 
+  spaceProduct            SpaceProduct?
   servicesProduct         ServicesProduct?
   equipamentProduct       EquipamentProduct?
 
@@ -319,25 +315,25 @@ model Product {
 
 model SpaceProduct{
   id            String      @id @default(uuid()) @db.Uuid
-  productId    String      @unique @db.Uuid
-  product      Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  capacity     Int        
-  area         Float
+  productId     String      @unique @db.Uuid
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  capacity      Int        
+  area          Float
 
   @@schema("multi")
   @@map("space_products")
 }
 
 model ServicesProduct{
-  id            String      @id @default(uuid()) @db.Uuid
-  productId     String      @unique@db.Uuid
-  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  duration      DateTime?   @db.Time(0) 
-  requirements  String?     @db.VarChar(500)
+  id                        String      @id @default(uuid()) @db.Uuid
+  productId                 String      @unique @db.Uuid
+  product                   Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  durationMinutes           Int? @db.Integer // Duração em minutos
+  requirements              String?     @db.VarChar(500)
   
-
   @@schema("multi")
   @@map("services_products")
+
 }
 
 model EquipamentProduct{
@@ -347,7 +343,7 @@ model EquipamentProduct{
   brand          String?     @db.VarChar(100)
   model          String?     @db.VarChar(100)
   specifications String?     @db.VarChar(1000)
-  stock          Int         @default(0) // Quantidade disponível em estoque
+  stock          Int         @default(0) 
 
   @@schema("multi")
   @@map("equipment_products")

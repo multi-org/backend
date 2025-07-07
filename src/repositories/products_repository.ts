@@ -1,46 +1,95 @@
 import { PrismaClient } from "@prisma/client";
-import { ProductDtos, EquipmentProductCreateDto, ServiceProductCreateDto, SpaceProductCreateDto } from "@app/models/Product_models";
+import { ProductCreateInput } from "@app/models/Product_models";
 
 const prisma = new PrismaClient();
 
 export class ProductsRepository {
 
-    async createProduct(productData: ProductDtos) { 
-        const product = await prisma.product.create({
-            data: productData
-        })
+    async createProduct(productData: ProductCreateInput) { 
+        const { title, description, type, basePrice, category, imagesUrls, ownerId, ownerType, unity } = productData;
+        
+        const result = await prisma.$transaction(async (tx) => {
+            const product = await tx.product.create({
+                data: {
+                    title,
+                    description,
+                    type,
+                    basePrice,
+                    category,
+                    imagesUrls,
+                    ownerId,
+                    ownerType,
+                    unity
+                },
+            });
+
+            let specificProduct;
+            switch (type) {
+                case "SPACE":
+                    const { capacity, area } = productData.spaceDetails;
+                    specificProduct = await tx.spaceProduct.create({
+                        data: {
+                            productId: product.id,
+                            capacity: capacity,
+                            area: area,
+                        },
+                    })
+                    break;
+                
+                case "SERVICE":
+                    const { duration, requirements } = productData.serviceDetails;
+                    
+                    specificProduct = await tx.servicesProduct.create({
+                        data: {
+                            productId: product.id,
+                            duration: duration ? new Date(`1970-01-01T${duration}`) : undefined, // Convert duration to DateTime
+                            requirements: requirements
+                        },
+                    });
+                    break;
+                
+                case "EQUIPAMENT":
+                    const { brand, model, specifications, stock } = productData.equipmentDetails;
+                    
+                    specificProduct = await tx.equipamentProduct.create({
+                        data: {
+                            productId: product.id,
+                            brand: brand,
+                            model: model,
+                            specifications: specifications,
+                            stock: Number(stock),
+                        },
+                    });
+                    break;
+                
+                default:
+                    throw new Error("Type of Product Invalid")
+            }
+
+            return { product, specificProduct }
+        });
+
+        return result;
+    }
+
+    async findProductByTitleOwnerIdAndType(title: string, ownerId: string, type: any) {
+        const product = await prisma.product.findFirst({
+            where: {
+                title,
+                ownerId,
+                type: type
+            }
+        });
         return product;
     }
 
-    async createServiceProduct(serviceProduct: ServiceProductCreateDto, productId: string) {
-        const service = await prisma.servicesProduct.create({
-            data: {
-                ...serviceProduct,
-                productId: productId
+    async deleteProduct(productId: string) {
+        const deleteProduct = await prisma.product.delete({
+            where: {
+                id: productId
             }
         });
-        return service;
-        
-    }
-
-    async createSpaceProduct(spaceProduct: SpaceProductCreateDto, productId: string) {
-        const space = await prisma.spaceProduct.create({
-            data: {
-                ...spaceProduct,
-                productId: productId
-            }
-        });
-        return space;
-
-    }
-
-    async createEquipmentProduct(equipmentProduct: EquipmentProductCreateDto, productId: string) {
-        const equipment = await prisma.equipamentProduct.create({
-            data: {
-                ...equipmentProduct,
-                productId: productId
-            }
-        });
-        return equipment;
     }
 }
+
+export default new ProductsRepository();

@@ -3,10 +3,11 @@ import { z } from "zod";
 const productSchemaZod = z.object({
   title: z.string().max(255, "Título deve ter no máximo 255 caracteres"),
   description: z.string().max(300, "Descrição deve ter no máximo 300 caracteres"),
-  type: z.enum(["SPACE", "SERVICE", "EQUIPMENT"]),
+  type: z.enum(["SPACE", "SERVICE", "EQUIPAMENT"]),
   basePrice: z.number().min(0, "Preço base não pode ser negativo"),
   category: z.string().max(500, "Categoria deve ter no máximo 500 caracteres"),
-  imagesUrls: z.array(z.string().optional())
+  imagesUrls: z.array(z.string().optional()),
+  ownerType: z.enum(["USER", "ENTERPRISE", "SUBSIDIARY"]),
 });
 
 const spaceProductSchema = z.object({
@@ -15,7 +16,7 @@ const spaceProductSchema = z.object({
 });
 
 const serviceProductSchema = z.object({
-  duration: z.string().optional(), // Pode ser uma string representando o tempo, ex: "01:00:00"
+  durationMinutes: z.number().int().min(0, "Duração deve ser um número inteiro não negativo").optional(),
   requirements: z.string().max(500, "Requisitos devem ter no máximo 500 caracteres").optional(),
 });
 
@@ -27,29 +28,53 @@ const equipmentProductSchema = z.object({
 });
 
 export function validateProductCreation(data: any) {
-  const base = productSchemaZod.parse(data);
-  switch (base.type) {
-    case "SPACE":
-      spaceProductSchema.parse(data);
-      break;
-    case "SERVICE":
-      serviceProductSchema.parse(data);
-      break;
-    case "EQUIPMENT":
-      equipmentProductSchema.parse(data);
-      break;
-    default:
-      throw new Error("Tipo de produto inválido"); 
+
+  const baseResult = productSchemaZod.safeParse(data);
+  if (!baseResult.success) {  
+    return baseResult;
   }
 
-  return base;
+  const base = baseResult.data;
+
+  let specificResult;
+  switch (base.type) {
+    case "SPACE":
+      specificResult = spaceProductSchema.safeParse(data);
+      break;
+    case "SERVICE":
+      specificResult = serviceProductSchema.safeParse(data);
+      break;
+    case "EQUIPAMENT":
+      specificResult = equipmentProductSchema.safeParse(data);
+      break;
+    default:
+      return {
+        success: false,
+        error: {
+          flatten: () => ({
+            fieldErrors: { type: ["Tipo de produto Inválido"] }
+          })
+        }
+      };
+  }
+
+  if(!specificResult.success) return specificResult;
+  
+
+  return {
+    success: true,
+    data: {
+      ...base,
+      ...specificResult
+    }
+  };
 }
 
 export interface ProductDtos { 
   title: string;
   description: string;
   ownerId: string;
-  ownerType: "USER" | "ENTERPRISE" | "SUBSIDIARY";
+  ownerType: "ENTERPRISE" | "SUBSIDIARY";
   type: "SPACE" | "EQUIPAMENT" | "SERVICE";
   basePrice: number;
   unity?: string;
@@ -68,8 +93,14 @@ export interface SpaceProductCreateDto {
 }
 
 export interface EquipmentProductCreateDto {
-  brand: string;
-  model: string;
-  specifications: string;
+  brand?: string;
+  model?: string;
+  specifications?: string;
   stock: number;
 }
+
+export type ProductCreateInput = ProductDtos & (
+  | { type: "SPACE"; spaceDetails: SpaceProductCreateDto }
+  | { type: "SERVICE"; serviceDetails: ServiceProductCreateDto }
+  | { type: "EQUIPAMENT"; equipmentDetails: EquipmentProductCreateDto }
+);

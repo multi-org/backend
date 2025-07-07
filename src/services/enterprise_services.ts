@@ -57,15 +57,22 @@ class EnterpriseServices {
             throw new CustomError("Enterprise not found", 404);
         }
 
-        return { message: "Enterprise found", status: 200, enterprise };
+        return enterprise;
     }
 
     async inviteLegalRepresentative(companyId: string, email: string, userId: string) {
         logger.info(`Inviting legal representative from company`);
+
         if (!email) {
             logger.warn('Email not provided');
             throw new CustomError("Email is required", 400);
         }
+
+        if (!companyId) {
+            logger.warn('Company ID not provided');
+            throw new CustomError("Company ID is required", 400);
+        }
+
         const guest = await userRepository.findUserByEmail(email);
         if (!guest) {
             logger.warn(`User not found in the system`);
@@ -77,13 +84,13 @@ class EnterpriseServices {
             logger.warn(`Cannot invite yourself as a legal representative`);
             throw new CustomError("You cannot invite yourself as a legal representative", 400);
         }
-        const company = await enterpriseRepository.findEnterpriseById(companyId);
+        const company = await this.findEnterpriseById(companyId);
 
         await Queue.add('inviteEnterpriseAdminEmail', {
             email: guest.email,
             nameAdmin: adminUser!.name,
             guestName: guest.name,
-            enterpriseName: company?.name,
+            enterpriseName: company.name,
             inviteLink: await generateInviteToken(guest.userId, companyId, 'adminCompany')
         }, { priority: 4 });
 

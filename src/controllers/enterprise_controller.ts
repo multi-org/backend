@@ -42,7 +42,7 @@ class EnterpriseController {
 
         try {
             const response = await EnterpriseService.findEnterpriseById(companyId);
-            return res.status(response.status).json(response);
+            return res.status(200).json(response);
         } catch (error: any) {
             const statusCode = error.status || 500;
             return res.status(statusCode).json({
