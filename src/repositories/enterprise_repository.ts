@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 export class EnterpriseRepository {
     async createEnterprise(enterpriseData: createEnterpriseDTOS) {
         const { legalRepresentatives, ...rest } = enterpriseData;
-        const enterprise = await prisma.enterprise.create({
+        const enterprise = await prisma.company.create({
             data: {
                 ...rest,
                 legalRepresentatives: {
@@ -16,7 +16,8 @@ export class EnterpriseRepository {
                             connect: { userId: rep.idRepresentative }
                         }
                     }))
-                }
+                },
+                createdBy: legalRepresentatives[0].idRepresentative, // Assuming the first representative is the creator
          
             }
         });
@@ -24,7 +25,7 @@ export class EnterpriseRepository {
     }
 
     async findEnterpriseByCnpj(cnpj: string) {
-        const enterprise = await prisma.enterprise.findFirst({
+        const enterprise = await prisma.company.findFirst({
             where: {
                 cnpj: cnpj,
                 status: 'ACTIVE'
@@ -35,7 +36,7 @@ export class EnterpriseRepository {
     }
 
     async findEnterpriseByEmail(email: string) {
-        const enterprise = await prisma.enterprise.findFirst({
+        const enterprise = await prisma.company.findFirst({
             where: {
                 email: email,
                 status: 'ACTIVE'
@@ -46,7 +47,7 @@ export class EnterpriseRepository {
     }
 
     async findEnterpriseById(id: string) {
-        const enterprise = await prisma.enterprise.findUnique({
+        const enterprise = await prisma.company.findUnique({
             where: {
                 id: id,
                 status: 'ACTIVE'
@@ -60,7 +61,7 @@ export class EnterpriseRepository {
         const representative = await prisma.legalRepresentative.findFirst({
             where: {
                 userId: userId,
-                enterpriseId: enterpriseId,
+                companyId: enterpriseId,
             }
         })
         return representative;
@@ -72,7 +73,7 @@ export class EnterpriseRepository {
                 user: {
                     connect: { userId: userId }
                 },
-                enterprise: {
+                company: {
                     connect: { id: enterpriseId }
                 }
             }
