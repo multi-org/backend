@@ -23,7 +23,7 @@ class EnterpriseController {
                 legalRepresentatives: [{idRepresentative: userId}]
             });
 
-            return res.status(response.status).json(response);
+            return res.status(200).json(response);
             
         } catch (error: any) {
             const statusCode = error.status || 500;
@@ -79,7 +79,7 @@ class EnterpriseController {
             const { userId, enterpriseId, role } = decoded;
 
             const response = await EnterpriseService.acceptInvite(userId, enterpriseId, role);
-            return res.status(response.status).json(response);
+            return res.status(200).json(response);
         } catch (error: any) {
             const statusCode = error.status || 500;
             return res.status(statusCode).json({

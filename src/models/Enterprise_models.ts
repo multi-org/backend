@@ -18,6 +18,27 @@ export const createEnterpriseZode = z.object({
     country: z.string().min(1, "Country is required"),
 });
 
+export interface EnterpriseDTOSWithAddress {
+    popularName: string,
+    email: string,
+    cnpj: string,
+    isMicroenterprise: boolean,
+    legalName?: string,
+    description?: string,
+    phone: string,
+    legalRepresentatives: {
+        idRepresentative: string,
+    }[],
+    street: string;
+    number: string;
+    complement?: string;
+    neighborhood: string;
+    city: string;
+    state: string;
+    zipCode: string;
+    country: string;
+}
+
 export interface companyAddress {
   street: string;
   number: string;

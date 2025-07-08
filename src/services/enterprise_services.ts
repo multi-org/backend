@@ -1,6 +1,6 @@
 import { logger, CustomError } from "@app/utils/logger";
-import { validationCnpj } from "@app/utils/basicFunctions";
-import { createEnterpriseDTOS } from "@app/models/Enterprise_models";
+import { validationCnpj, extractAddressData, extractCompanyData } from "@app/utils/basicFunctions";
+import { EnterpriseDTOSWithAddress } from "@app/models/Enterprise_models";
 import Queue from '@app/jobs/lib/queue'
 import {generateInviteToken} from '@app/middlewares/global_middleware'
 
@@ -8,7 +8,7 @@ import userRepository from '@app/repositories/user_repository';
 import enterpriseRepository from "@app/repositories/enterprise_repository";
 
 class EnterpriseServices {
-    async createEnterprise(enterpriseData: createEnterpriseDTOS) {
+    async createEnterprise(enterpriseData: EnterpriseDTOSWithAddress) {
         logger.info("Starting enterprise registration process");
 
         if (!enterpriseData.legalRepresentatives || enterpriseData.legalRepresentatives.length === 0) {
@@ -34,13 +34,16 @@ class EnterpriseServices {
             throw new CustomError("CNPJ already registered", 400);
         }
 
-        const newEnterprise = await enterpriseRepository.createEnterprise({ ...enterpriseData });
+        const companyData = await extractCompanyData(enterpriseData);
+        const addressData = await extractAddressData(enterpriseData);
+
+        const newEnterprise = await enterpriseRepository.createEnterprise(companyData, addressData);
         if (!newEnterprise) {
             logger.error("Failed to create enterprise");
-            throw new CustomError("Failed to create enterprise", 500);
-        }
+                throw new CustomError("Failed to create enterprise", 500);
+            }
 
-        return { message: "Successfully created company", status: 200, enterpriseName: newEnterprise.name };
+        return { message: "Successfully created company", enterpriseName: newEnterprise.popularName };
     }
 
     async findEnterpriseById(id: string) {
@@ -90,7 +93,7 @@ class EnterpriseServices {
             email: guest.email,
             nameAdmin: adminUser!.name,
             guestName: guest.name,
-            enterpriseName: company.name,
+            enterpriseName: company.popularName,
             inviteLink: await generateInviteToken(guest.userId, companyId, 'adminCompany')
         }, { priority: 4 });
 
@@ -142,7 +145,7 @@ class EnterpriseServices {
             throw new CustomError("Failed to update user role", 500);
         }
 
-        return { message: "Legal representative added successfully", status: 200, representative: addLegalRepresentative };
+        return { message: "Legal representative added successfully", representative: addLegalRepresentative };
     }
 }
 

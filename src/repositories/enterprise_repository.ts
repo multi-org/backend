@@ -1,28 +1,45 @@
 import { PrismaClient } from '@prisma/client';
-import { createEnterpriseDTOS } from '@app/models/Enterprise_models';
+import { createEnterpriseDTOS, companyAddress} from '@app/models/Enterprise_models';
 
 const prisma = new PrismaClient();
 
 
 export class EnterpriseRepository {
-    async createEnterprise(enterpriseData: createEnterpriseDTOS) {
+    async createEnterprise(enterpriseData: createEnterpriseDTOS, addressData: companyAddress) {
         const { legalRepresentatives, ...rest } = enterpriseData;
-        const enterprise = await prisma.company.create({
-            data: {
-                ...rest,
-                legalRepresentatives: {
-                    create: legalRepresentatives.map((rep: any) => ({
-                        user: {
-                            connect: { userId: rep.idRepresentative }
-                        }
-                    }))
-                },
-                createdBy: legalRepresentatives[0].idRepresentative, // Assuming the first representative is the creator
-         
-            }
+        const enterprise = await prisma.$transaction(async (tx) => {
+            const company = await tx.company.create({
+                data: {
+                    ...rest,
+                    legalRepresentatives: {
+                        create: legalRepresentatives.map((rep: any) => ({
+                            user: {
+                                connect: { userId: rep.idRepresentative }
+                            }
+                        }))
+                    },
+                    createdBy: legalRepresentatives[0].idRepresentative, // Assuming the first representative is the creator
+                }
+            });
+
+            const companyAddres = await tx.address.create({
+                data: {
+                    ...addressData,
+                    company: {
+                        connect: { id: company.id }
+                    },
+                    typeAddress: 'ENTERPRISE'
+                }
+            })
+            return {
+                ...company,
+                address: companyAddres
+            };
         });
+
         return enterprise;
     }
+    
 
     async findEnterpriseByCnpj(cnpj: string) {
         const enterprise = await prisma.company.findFirst({
@@ -31,9 +48,9 @@ export class EnterpriseRepository {
                 status: 'ACTIVE'
             },
         });
-
         return enterprise;
     }
+
 
     async findEnterpriseByEmail(email: string) {
         const enterprise = await prisma.company.findFirst({
