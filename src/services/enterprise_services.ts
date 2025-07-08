@@ -2,10 +2,12 @@ import { logger, CustomError } from "@app/utils/logger";
 import { validationCnpj, extractAddressData, extractCompanyData } from "@app/utils/basicFunctions";
 import { EnterpriseDTOSWithAddress } from "@app/models/Enterprise_models";
 import Queue from '@app/jobs/lib/queue'
-import {generateInviteToken} from '@app/middlewares/global_middleware'
+import { generateInviteToken } from '@app/middlewares/global_middleware'
+import { dataSave, delData, getData, getKeysByPrefix } from '@app/models/redis_models';
 
 import userRepository from '@app/repositories/user_repository';
 import enterpriseRepository from "@app/repositories/enterprise_repository";
+import useServices from "./user_services";
 
 class EnterpriseServices {
     async createEnterprise(enterpriseData: EnterpriseDTOSWithAddress) {
@@ -147,6 +149,94 @@ class EnterpriseServices {
 
         return { message: "Legal representative added successfully", representative: addLegalRepresentative };
     }
+
+    async requestCompanyRegistration(enterpriseData: EnterpriseDTOSWithAddress, userId: string) {
+        logger.info("Starting enterprise registration process");
+
+        const isValidCnpj = await validationCnpj(enterpriseData.cnpj);
+        if (isValidCnpj.status !== 200) {
+            logger.warn('Invalid CNPJ provided');
+            throw new CustomError(isValidCnpj.message, isValidCnpj.status);
+        }
+
+        const existingEnterpriseWithEmail = await enterpriseRepository.findEnterpriseByEmail(enterpriseData.email);
+        if (existingEnterpriseWithEmail) {
+            logger.warn(`Enterprise already exists`);
+            throw new CustomError("Email already registered", 400);
+        }
+
+        const existingEnterpriseWithCnpj = await enterpriseRepository.findEnterpriseByCnpj(enterpriseData.cnpj);
+        if (existingEnterpriseWithCnpj) {
+            logger.warn(`Enterprise with CNPJ ${enterpriseData.cnpj} already exists`);
+            throw new CustomError("CNPJ already registered", 400);
+        }
+
+        const requestCompanyRegistration = await getData('company', enterpriseData.cnpj);
+        if (requestCompanyRegistration) {
+            logger.error("A request to create this company has already been registered");
+            throw new CustomError("A request to create this company has already been registered", 500);
+        }
+
+        const newCompanyRedisData = await dataSave({ prefix: 'company', key: enterpriseData.cnpj, value: { ...enterpriseData, requestedBy: userId }, ttl: 2678400 });
+        if( !newCompanyRedisData) {
+            logger.error("Failed to save company data in Redis");
+            throw new CustomError("Failed to save company data", 500);
+        }
+        
+        const company = await getData('company', enterpriseData.cnpj);
+        return { message: "Required data saved successfully", company };
+    }
+
+    async getAllCompanyRequest() {
+        logger.info("Retrieving all company requests");
+
+        const keys = await getKeysByPrefix('company');
+        if (!keys || keys.length === 0) {
+            logger.warn("No company requests found");
+            throw new CustomError("No company requests found", 404);
+        }
+
+        const companies = await Promise.all(keys.map(async (key) => {
+            const companyData = await getData('company', key);
+            return { ...companyData, cnpj: key };
+        }));
+
+        const companiesWithUserData = await Promise.all(
+        companies.map(async (company) => {
+            const userData = await useServices.getMe(company.requestedBy);
+            return {
+                ...company,
+                requestedByUser: { name: userData.name, userId: userData.id }
+            };
+        })
+    );
+
+        return companiesWithUserData;
+    }
+
+    async confirmCompanyCreation(cnpj: string, legalRepresentatives: { idRepresentative: string }[]){
+        logger.info(`Confirming company creation for CNPJ: ${cnpj}`);
+
+        const companyDataRedis = await getData('company', cnpj);
+        if (!companyDataRedis) {
+            logger.warn(`No company data found for CNPJ: ${cnpj}`);
+            throw new CustomError("Company data not found", 404);
+        }
+
+        const companyData = await extractCompanyData({...companyDataRedis, legalRepresentatives});
+        const addressData = await extractAddressData(companyDataRedis);
+
+        const newEnterprise = await enterpriseRepository.createEnterprise(companyData, addressData);
+        if (!newEnterprise) {
+            logger.error("Failed to create enterprise");
+                throw new CustomError("Failed to create enterprise", 500);
+        }
+
+        await delData('company', cnpj);
+        return { message: "Successfully created company and added user as associate", enterpriseName: newEnterprise.popularName };
+
+    }
+
 }
 
 

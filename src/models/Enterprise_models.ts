@@ -26,7 +26,7 @@ export interface EnterpriseDTOSWithAddress {
     legalName?: string,
     description?: string,
     phone: string,
-    legalRepresentatives: {
+    legalRepresentatives?: {
         idRepresentative: string,
     }[],
     street: string;

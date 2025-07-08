@@ -1,5 +1,5 @@
 import { AuthRequest } from "@app/middlewares/global_middleware";
-import { Response } from "express";
+import { response, Response } from "express";
 import { createEnterpriseZode } from "@app/models/Enterprise_models";
 import EnterpriseService from "@app/services/enterprise_services";
 import jwt from 'jsonwebtoken';
@@ -79,6 +79,58 @@ class EnterpriseController {
             const { userId, enterpriseId, role } = decoded;
 
             const response = await EnterpriseService.acceptInvite(userId, enterpriseId, role);
+            return res.status(200).json(response);
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async requestCompanyRegistrationData(req: AuthRequest, res: Response) {
+        const result = createEnterpriseZode.safeParse(req.body);
+        if (!result.success) {
+            const errors = result.error.flatten().fieldErrors;
+            return res.status(400).json({
+                message: "Validation failed",
+                errors: errors,
+            });
+        }
+        try {
+            const userId = req.userId!;
+            const response = await EnterpriseService.requestCompanyRegistration(result.data, userId);
+            return res.status(200).json(response);
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async getAllCompanyRequest(req: AuthRequest, res: Response) {
+        try {
+            const companies = await EnterpriseService.getAllCompanyRequest();
+            return res.status(200).json(companies);
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async confirmCompanyCreationData(req: AuthRequest, res: Response) {
+        const { cnpj } = req.params;
+        const legalRepresentatives = [{ idRepresentative: req.userId! }];
+
+        if (!cnpj) {
+            return res.status(400).json({ message: "CNPJ is required" });
+        }
+
+        try {
+            const response = await EnterpriseService.confirmCompanyCreation(cnpj, legalRepresentatives);
             return res.status(200).json(response);
         } catch (error: any) {
             const statusCode = error.status || 500;

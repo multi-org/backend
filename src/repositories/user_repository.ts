@@ -151,6 +151,19 @@ export class UserRepository {
         return user;
     }
 
+    async addUserAsCompanyAssociate(companyId: string, userId: string) {
+        console.log(`Adding user ${userId} as associate to company ${companyId}`);
+        const userAssociate = await prisma.companyAssociate.create({
+            data: {
+                userId: userId,
+                companyId: companyId,
+                registrationNumber: "123456"
+            }
+        })
+
+        return userAssociate;
+    }
+
 }
 
 export default new UserRepository();
