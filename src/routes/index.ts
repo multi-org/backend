@@ -1,6 +1,6 @@
 import { Express, Request, Response } from "express";
 import express from "express";
-import produtos from "./produtosRoutes";
+import produtos from "./products_routes";
 import swaggerUi from "swagger-ui-express";
 import swaggerDocument from "../swagger.json";
 

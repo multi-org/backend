@@ -188,6 +188,7 @@ export class UserServices {
 
         logger.info("User found successfully");
         return {
+            id: user.userId,
             name: user.name,
             email: user.email,
             phoneNumber: user.phoneNumber,

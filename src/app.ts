@@ -7,6 +7,7 @@ import { connectRedis } from "./config/redis"
 import mainRouter from "./routes/index";
 import userRoutes from "./routes/user_routes";
 import enterpriseRoutes from "./routes/enterprise_routes";
+import productRoutes from "./routes/products_routes"
 
 
 const app = express();
@@ -29,5 +30,6 @@ app.use(cookieParser());
 // app.use(mainRouter);
 app.use("/users", userRoutes);
 app.use("/companies", enterpriseRoutes);
+app.use("/products", productRoutes)
 
 export default app;
