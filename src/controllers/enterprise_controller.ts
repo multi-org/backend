@@ -1,5 +1,5 @@
 import { AuthRequest } from "@app/middlewares/global_middleware";
-import { response, Response } from "express";
+import { Response } from "express";
 import { createEnterpriseZode } from "@app/models/Enterprise_models";
 import EnterpriseService from "@app/services/enterprise_services";
 import jwt from 'jsonwebtoken';
@@ -17,7 +17,6 @@ class EnterpriseController {
 
         try {
             const userId = req.userId!;
-            
             const response = await EnterpriseService.createEnterprise({
                 ...result.data,
                 legalRepresentatives: [{idRepresentative: userId}]
@@ -98,9 +97,8 @@ class EnterpriseController {
             });
         }
         try {
-            const userId = req.userId!;
-            const response = await EnterpriseService.requestCompanyRegistration(result.data, userId);
-            return res.status(200).json(response);
+            const response = await EnterpriseService.requestCompanyRegistration(result.data);
+            return res.status(200).json({message: "Required data saved successfully", company: response});
         } catch (error: any) {
             const statusCode = error.status || 500;
             return res.status(statusCode).json({
@@ -131,7 +129,7 @@ class EnterpriseController {
 
         try {
             const response = await EnterpriseService.confirmCompanyCreation(cnpj, legalRepresentatives);
-            return res.status(200).json(response);
+            return res.status(200).json({message: "Successfully created company and added user as associate", company: response.popularName});
         } catch (error: any) {
             const statusCode = error.status || 500;
             return res.status(statusCode).json({

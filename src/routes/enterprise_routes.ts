@@ -11,8 +11,10 @@ enterpriseRoutes.get('/all', jwtRequired, checkCompanyPermission('read:company')
 enterpriseRoutes.get('/invite/accept', jwtRequired, enterpriseController.acceptInvite);
 enterpriseRoutes.post('/invite/:companyId', jwtRequired, checkPermission('invite:legal_representative'), enterpriseController.inviteLegalRepresentative);
 
-enterpriseRoutes.post('/request/registration', jwtRequired, enterpriseController.requestCompanyRegistrationData);
-enterpriseRoutes.get('/all/requests', jwtRequired, enterpriseController.getAllCompanyRequest);
-enterpriseRoutes.post('/confirm/:cnpj', jwtRequired,  checkPermission('create:company'), enterpriseController.confirmCompanyCreationData);
+enterpriseRoutes.post('/request/registration', jwtRequired, checkPermission('request_registration:company'), enterpriseController.requestCompanyRegistrationData);
+enterpriseRoutes.get('/all/requests', jwtRequired, checkCompanyPermission('get_all_requests:company'), enterpriseController.getAllCompanyRequest);
+enterpriseRoutes.post('/confirm/:cnpj', jwtRequired, checkPermission('create:company'), enterpriseController.confirmCompanyCreationData);
+
+
 
 export default enterpriseRoutes;

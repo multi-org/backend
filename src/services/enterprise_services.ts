@@ -150,7 +150,7 @@ class EnterpriseServices {
         return { message: "Legal representative added successfully", representative: addLegalRepresentative };
     }
 
-    async requestCompanyRegistration(enterpriseData: EnterpriseDTOSWithAddress, userId: string) {
+    async requestCompanyRegistration(enterpriseData: EnterpriseDTOSWithAddress) {
         logger.info("Starting enterprise registration process");
 
         const isValidCnpj = await validationCnpj(enterpriseData.cnpj);
@@ -177,14 +177,15 @@ class EnterpriseServices {
             throw new CustomError("A request to create this company has already been registered", 500);
         }
 
-        const newCompanyRedisData = await dataSave({ prefix: 'company', key: enterpriseData.cnpj, value: { ...enterpriseData, requestedBy: userId }, ttl: 2678400 });
+        const newCompanyRedisData = await dataSave({ prefix: 'company', key: enterpriseData.cnpj, value: enterpriseData, ttl: 2678400 });
         if( !newCompanyRedisData) {
             logger.error("Failed to save company data in Redis");
             throw new CustomError("Failed to save company data", 500);
         }
         
         const company = await getData('company', enterpriseData.cnpj);
-        return { message: "Required data saved successfully", company };
+        return company;
+
     }
 
     async getAllCompanyRequest() {
@@ -204,10 +205,7 @@ class EnterpriseServices {
         const companiesWithUserData = await Promise.all(
         companies.map(async (company) => {
             const userData = await useServices.getMe(company.requestedBy);
-            return {
-                ...company,
-                requestedByUser: { name: userData.name, userId: userData.id }
-            };
+            return company
         })
     );
 
@@ -233,7 +231,7 @@ class EnterpriseServices {
         }
 
         await delData('company', cnpj);
-        return { message: "Successfully created company and added user as associate", enterpriseName: newEnterprise.popularName };
+        return newEnterprise;
 
     }
 
