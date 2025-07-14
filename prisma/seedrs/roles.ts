@@ -155,8 +155,26 @@ export async function permissions() {
       action: 'cancel',
       resource: 'rent_space',
       description: 'Allows canceling a rented space',
+    },
+
+    // solicitações de registro
+    {
+      action: 'request_registration',
+      resource: 'company',
+      description: 'Allows requesting registration of a company',
+    },
+    {
+      action: 'request_registration',
+      resource: 'company_associate',
+      description: 'Allows requesting registration of a company associate',
+    },
+    {
+      action: 'get_all_requests',
+      resource: 'company',
+      description: 'Allows getting all company registration requests',
     }
-    // 22
+
+    
   ];
 
   await prisma.permission.createMany({
@@ -193,8 +211,15 @@ export async function RolesPermissions() {
   relations.push(...adminCompanyRelations);
 
   // Adicionando permissões para papel de usuário comum
-  [ 19, 20, 21, 22].forEach(pid => {
-    relations.push({ roleId: roleIds['commonUser'], permissionId: pid });
+  const permissionsIdCommun = permissions
+    .filter(p => p.action === 'rent' || p.action === 'cancel' || p.action === 'request_registration' ? p.id : null)
+    .map(p => p.id);
+  
+  permissionsIdCommun.forEach(pid => {
+    relations.push({
+      roleId: roleIds['commonUser'],
+      permissionId: pid
+    });
   });
 
   await prisma.rolesPermission.createMany({

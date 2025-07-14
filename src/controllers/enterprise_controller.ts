@@ -17,7 +17,6 @@ class EnterpriseController {
 
         try {
             const userId = req.userId!;
-            
             const response = await EnterpriseService.createEnterprise({
                 ...result.data,
                 legalRepresentatives: [{idRepresentative: userId}]
@@ -80,6 +79,57 @@ class EnterpriseController {
 
             const response = await EnterpriseService.acceptInvite(userId, enterpriseId, role);
             return res.status(200).json(response);
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async requestCompanyRegistrationData(req: AuthRequest, res: Response) {
+        const result = createEnterpriseZode.safeParse(req.body);
+        if (!result.success) {
+            const errors = result.error.flatten().fieldErrors;
+            return res.status(400).json({
+                message: "Validation failed",
+                errors: errors,
+            });
+        }
+        try {
+            const response = await EnterpriseService.requestCompanyRegistration(result.data);
+            return res.status(200).json({message: "Required data saved successfully", company: response});
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async getAllCompanyRequest(req: AuthRequest, res: Response) {
+        try {
+            const companies = await EnterpriseService.getAllCompanyRequest();
+            return res.status(200).json(companies);
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async confirmCompanyCreationData(req: AuthRequest, res: Response) {
+        const { cnpj } = req.params;
+        const legalRepresentatives = [{ idRepresentative: req.userId! }];
+
+        if (!cnpj) {
+            return res.status(400).json({ message: "CNPJ is required" });
+        }
+
+        try {
+            const response = await EnterpriseService.confirmCompanyCreation(cnpj, legalRepresentatives);
+            return res.status(200).json({message: "Successfully created company and added user as associate", company: response.popularName});
         } catch (error: any) {
             const statusCode = error.status || 500;
             return res.status(statusCode).json({

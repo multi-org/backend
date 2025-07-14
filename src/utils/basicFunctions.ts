@@ -69,7 +69,6 @@ export const verifyBirthDate = async (birth: string) => {
 
 export async function extractCompanyData(enterpriseData: EnterpriseDTOSWithAddress): Promise<createEnterpriseDTOS> {
     const { popularName, email, cnpj, phone, description, legalName, isMicroenterprise, legalRepresentatives } = enterpriseData;
-
     return {
         popularName: popularName.trim(),
         email: email.toLowerCase().trim(),
@@ -78,13 +77,12 @@ export async function extractCompanyData(enterpriseData: EnterpriseDTOSWithAddre
         description: description?.trim(),
         legalName: legalName?.trim(),
         isMicroenterprise,
-        legalRepresentatives: legalRepresentatives
+        legalRepresentatives: legalRepresentatives! || []
     };
 }
 
 export async function extractAddressData(enterpriseData: EnterpriseDTOSWithAddress): Promise<companyAddress> {
     const { street, number, complement, neighborhood, city, state, zipCode, country } = enterpriseData;
-
     return {
         street: street.trim(),
         number: number.trim(),
