@@ -73,7 +73,7 @@ model User {
   email           String     @db.VarChar(255)
   profileImageUrl String?   @db.VarChar(1000)
   password        String     @db.VarChar(255)
-  cpf             String     @db.VarChar(255)
+  cpf             String     @db.VarChar(15)
   birthDate       DateTime   @db.Date
   status          Status     @default(ACTIVE)
   preferences     Int[]
@@ -230,9 +230,10 @@ model LegalRepresentative {
 model CompanyAssociate {
   userId                String  @db.Uuid
   user                  User     @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
-  registrationNumber    String @db.VarChar(10)
-  companyId            String   @db.Uuid
-  company              Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userCpf               String @db.VarChar(15)  
+  companyId             String   @db.Uuid
+  company               Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  documentUrl           String? @db.VarChar(1000) 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @default(now()) @updatedAt
 
