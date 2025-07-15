@@ -2,7 +2,7 @@ import userRepository from '@app/repositories/user_repository';
 import enterpriseRepository from '@app/repositories/enterprise_repository';
 import enterpriseServices from './enterprise_services';
 import { createUserDTOS, UserAddress } from '@app/models/User_models';
-import { dataSave, delData, getData } from '@app/models/redis_models';
+import { dataSave, delData, getData, getKeysByPrefix } from '@app/models/redis_models';
 
 import { logger, CustomError } from '@app/utils/logger';
 import { convertDateToDatabase, convertDateToUser, validationCpf, verifyBirthDate } from '@app/utils/basicFunctions'
@@ -259,6 +259,53 @@ export class UserServices {
         logger.info("Document PDF uploaded successfully");
 
         return {message: "Association request created successfully"};
+    }
+
+    async getAllAssociations() {
+        logger.info("Retrieving all association requests");
+
+        const keys = await getKeysByPrefix('association');
+        if (!keys || keys.length === 0) {
+            logger.warn("No association requests found");
+            throw new CustomError("No association requests found", 404);
+        }
+
+        const associationRequest = await Promise.all(keys.map(async (key) => {
+            const associationsData = await getData('association', key);
+            return { ...associationsData, userId: key };
+        }));
+
+        const associationsWithUserData = await Promise.all(associationRequest.map(async (association) => {
+            const userData = await this.getMe(association.userId);
+            return association;
+        }));
+
+        return associationsWithUserData;
+    }
+
+
+    async associationToCompanyConfirmation(userAssociation: string) {
+        logger.info("Confirming association with company");
+
+        const user = await this.getMe(userAssociation);
+
+        const associationDataRedis = await getData('association', user.id);
+        if (!associationDataRedis) {
+            logger.warn("No association data found for userId:" + user.id);
+            throw new CustomError("Association not found", 404);
+        }
+
+        const createAssociation = await userRepository.addUserAsCompanyAssociate(user.id, associationDataRedis.companyId, associationDataRedis.documentUrl, associationDataRedis.userCpf);
+        if(!createAssociation) {
+            logger.error("Failed to create association in the database");
+            throw new CustomError("Failed to create association in the database", 500);
+        }
+
+        logger.info("Association confirmed successfully");
+        return {
+            message: "Association confirmed successfully",
+            association: createAssociation
+        };
     }
 }
 
