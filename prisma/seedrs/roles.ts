@@ -172,9 +172,18 @@ export async function permissions() {
       action: 'get_all_requests',
       resource: 'company',
       description: 'Allows getting all company registration requests',
-    }
+    },
+     {
+      action: 'get_all_requests',
+      resource: 'company_associate',
+      description: 'Allows getting all company registration requests',
+    },
+    {
+      action: 'accept',
+      resource: 'company_associate',
+      description: 'Allows accepting a company associate request',
+    },
 
-    
   ];
 
   await prisma.permission.createMany({
