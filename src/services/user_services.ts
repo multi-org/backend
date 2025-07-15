@@ -300,6 +300,7 @@ export class UserServices {
             logger.error("Failed to create association in the database");
             throw new CustomError("Failed to create association in the database", 500);
         }
+        await delData('association', user.id);  
 
         logger.info("Association confirmed successfully");
         return {
