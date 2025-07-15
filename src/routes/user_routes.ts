@@ -16,6 +16,6 @@ userRoutes.post('/address', jwtRequired, userController.createAddress);
 
 userRoutes.post('/request/association/:companyId', jwtRequired, uploadDocuments.single('raw'), userController.requestAssociation);
 userRoutes.get("/all/associations/request", jwtRequired, checkPermission("get_all_requests:company_associate"), userController.getAllAssociations);
-userRoutes.post("/association/confirmation/:userId", jwtRequired, checkCompanyPermission('accept:company_associate'), userController.associationToCompanyConfirmation);
+userRoutes.post("/association/confirmation/:userId/:companyId", jwtRequired, checkCompanyPermission('accept:company_associate'), userController.associationToCompanyConfirmation);
 
 export default userRoutes;
