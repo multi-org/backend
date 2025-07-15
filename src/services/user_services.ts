@@ -1,5 +1,6 @@
 import userRepository from '@app/repositories/user_repository';
 import enterpriseRepository from '@app/repositories/enterprise_repository';
+import enterpriseServices from './enterprise_services';
 import { createUserDTOS, UserAddress } from '@app/models/User_models';
 import { dataSave, delData, getData } from '@app/models/redis_models';
 
@@ -197,6 +198,7 @@ export class UserServices {
             isEmailVerified: user.isEmailVerified,
             isPhoneVerified: user.isPhoneVerified,
             status: user.status,
+            profile: user.profileImageUrl ? user.profileImageUrl : null,
         };
     }
 
@@ -228,6 +230,35 @@ export class UserServices {
                 country: address.country,
             }
         }
+    }
+
+    async requestAssociationUser(userId: string, companyId: string, userCpf: string, localFilePath: string) {
+        logger.info("Starting association registration process");
+
+        if (!userCpf) {
+            logger.warn("User CPF not provided");
+            throw new CustomError("User CPF not provided", 400);
+        }
+
+        const user = await this.getMe(userId);
+        await enterpriseServices.findEnterpriseById(companyId);
+
+        if (userCpf !== user.cpf) {
+            logger.warn("User CPF does not match the provided CPF");
+            throw new CustomError("User CPF does not match the provided CPF", 400);
+        }
+
+        logger.info("User and company validated successfully");
+
+        const uploadDocumentPdf = await Queue.add('uploadDocumentPdf', { localFilePath, userId, userCpf, companyId }, { priority: 1 });
+        if (!uploadDocumentPdf) {
+            logger.error("Failed to upload document PDF");
+            throw new CustomError("Failed to upload document PDF", 500);
+        }
+
+        logger.info("Document PDF uploaded successfully");
+
+        return {message: "Association request created successfully"};
     }
 }
 

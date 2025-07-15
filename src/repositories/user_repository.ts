@@ -58,6 +58,7 @@ export class UserRepository {
                 isEmailVerified: true,
                 birthDate: true,
                 isPhoneVerified: true,
+                profileImageUrl: true,
                 userRoles: {
                     select: {
                         role: {
@@ -162,6 +163,17 @@ export class UserRepository {
         })
 
         return userAssociate;
+    }
+
+    async addImageUser(userId: string, imagesUrls: string) {
+        return await prisma.user.update({
+            where: {
+                userId: userId
+            },
+            data: {
+                profileImageUrl: imagesUrls
+            }
+        });
     }
 
 }

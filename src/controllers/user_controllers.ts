@@ -199,6 +199,28 @@ class userController {
         }
     }
 
+    async requestAssociation(req: AuthRequest, res: Response) { 
+        
+        if (!req.file) {
+            return res.status(400).json({ message: "File not found in request" });
+        }
+
+        const { companyId } = req.params;
+        const userId = req.userId!;
+        const { userCpf } = req.body;
+        const localFilePath = req.file.path;
+
+        try {
+            const association = await UserService.requestAssociationUser(userId, companyId, userCpf, localFilePath);
+            return res.status(201).json(association);
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
 
 }
 
