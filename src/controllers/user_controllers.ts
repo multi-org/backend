@@ -199,6 +199,57 @@ class userController {
         }
     }
 
+    async requestAssociation(req: AuthRequest, res: Response) { 
+        
+        if (!req.file) {
+            return res.status(400).json({ message: "File not found in request" });
+        }
+
+        const { companyId } = req.params;
+        const userId = req.userId!;
+        const { userCpf } = req.body;
+        const localFilePath = req.file.path;
+
+        try {
+            const association = await UserService.requestAssociationUser(userId, companyId, userCpf, localFilePath);
+            return res.status(201).json(association);
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async getAllAssociations(req: AuthRequest, res: Response) { 
+        try {
+            const associations = await UserService.getAllAssociations();
+            return res.status(200).json(associations);
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async associationToCompanyConfirmation(req: AuthRequest, res: Response) {
+        const { userId } = req.params;
+        if (!userId) {
+            return res.status(400).json({ message: "User ID is required" });
+        }
+
+        try {
+            const confirmation = await UserService.associationToCompanyConfirmation(userId);
+            return res.status(200).json(confirmation);
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
 
 }
 

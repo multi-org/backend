@@ -58,6 +58,7 @@ export class UserRepository {
                 isEmailVerified: true,
                 birthDate: true,
                 isPhoneVerified: true,
+                profileImageUrl: true,
                 userRoles: {
                     select: {
                         role: {
@@ -151,17 +152,28 @@ export class UserRepository {
         return user;
     }
 
-    async addUserAsCompanyAssociate(companyId: string, userId: string) {
-        console.log(`Adding user ${userId} as associate to company ${companyId}`);
-        const userAssociate = await prisma.companyAssociate.create({
+    async addUserAsCompanyAssociate(userId: string, companyId: string, documentUrl: string, userCpf: string) {
+        const representative = await prisma.companyAssociate.create({
             data: {
                 userId: userId,
                 companyId: companyId,
-                registrationNumber: "123456"
+                documentUrl: documentUrl,
+                userCpf: userCpf
             }
-        })
+        });
 
-        return userAssociate;
+        return representative;
+    }
+
+    async addImageUser(userId: string, imagesUrls: string) {
+        return await prisma.user.update({
+            where: {
+                userId: userId
+            },
+            data: {
+                profileImageUrl: imagesUrls
+            }
+        });
     }
 
 }
