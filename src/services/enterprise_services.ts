@@ -239,6 +239,23 @@ class EnterpriseServices {
 
     }
 
+    async searchEnterpriseMultipleFields(legalName: string) { 
+        logger.info(`Searching for enterprise`);
+
+        if (!legalName || legalName.trim() === '') {
+            logger.warn('No legal name provided for enterprise search');
+            throw new CustomError("Legal name is required", 400);
+        }
+
+        const enterprise = await enterpriseRepository.searchEnterpriseMultipleFields(legalName);
+        if (!enterprise) {
+            logger.warn(`Enterprise with legal name ${legalName} not found`);
+            throw new CustomError("Enterprise not found", 404);
+        }
+
+        return enterprise;
+    }
+
 }
 
 
