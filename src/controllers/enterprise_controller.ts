@@ -139,6 +139,22 @@ class EnterpriseController {
         }
     }
 
+    async searchEnterpriseMultipleFields(req: AuthRequest, res: Response) {
+        const { searchTerm } = req.params;
+        if (!searchTerm || typeof searchTerm !== 'string') {
+            return res.status(400).json({ message: "Search term is required" });
+        }
+        try {
+            const response = await EnterpriseService.searchEnterpriseMultipleFields(searchTerm);
+            return res.status(200).json({message: 'Empresa encontrada com sucesso', response});
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
 }
 
 export default new EnterpriseController();

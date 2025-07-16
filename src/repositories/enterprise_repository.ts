@@ -53,25 +53,69 @@ export class EnterpriseRepository {
 
 
     async findEnterpriseByEmail(email: string) {
-        const enterprise = await prisma.company.findFirst({
+        return await prisma.company.findFirst({
             where: {
                 email: email,
                 status: 'ACTIVE'
             },
         });
-
-        return enterprise;
     }
 
     async findEnterpriseById(id: string) {
-        const enterprise = await prisma.company.findUnique({
+        return await prisma.company.findUnique({
             where: {
                 id: id,
                 status: 'ACTIVE'
             },
         });
+    }
 
-        return enterprise;
+    async findEnterpriseByLegalName(legalName: string) {
+        return await prisma.company.findFirst({
+            where: {
+                legalName: {
+                    contains: legalName,
+                    mode: 'insensitive'
+                },
+                status: 'ACTIVE'
+            },
+            take: 10
+        });
+    }
+
+    async searchEnterpriseMultipleFields(searchTerm: string) {
+        return await prisma.company.findMany({
+            where: {
+                OR: [
+                    {
+                        legalName: {
+                            contains: searchTerm,
+                            mode: 'insensitive'
+                        }
+                    },
+                    {
+                        email: {
+                            contains: searchTerm,
+                            mode: 'insensitive'
+                        }
+                    },
+                    {
+                        cnpj: {
+                            contains: searchTerm,
+                            mode: 'insensitive'
+                        }
+                    },
+                    {
+                        popularName: {
+                            contains: searchTerm,
+                            mode: 'insensitive'
+                        }
+                    }
+                ],
+                status: 'ACTIVE'
+            },
+            take: 10
+        });
     }
 
     async existingRepresentative(userId: string, enterpriseId: string) {
