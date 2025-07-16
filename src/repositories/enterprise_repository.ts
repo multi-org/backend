@@ -70,6 +70,15 @@ export class EnterpriseRepository {
         });
     }
 
+    async findEnterpriseByPhone(phone: string) {
+        return await prisma.company.findFirst({
+            where: {
+                phone: phone,
+                status: 'ACTIVE'
+            },
+        });
+    }
+
     async findEnterpriseByLegalName(legalName: string) {
         return await prisma.company.findFirst({
             where: {
@@ -110,7 +119,7 @@ export class EnterpriseRepository {
                             contains: searchTerm,
                             mode: 'insensitive'
                         }
-                    }
+                    },
                 ],
                 status: 'ACTIVE'
             },
