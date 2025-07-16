@@ -1,4 +1,3 @@
-import { DefaultArgs } from "@prisma/client/runtime/library";
 import { z } from "zod";
 
 export const emailZode = z.string().email("Invalid email format");
@@ -20,6 +19,10 @@ export const createUserZode = z.object({
   preferences: z.array(z.union([z.literal(1), z.literal(2), z.literal(3)]), {
     required_error: "Preferences are required",
   }).nonempty("Preferences cannot be empty"),
+});
+
+export const userCpfZode = z.object({
+  cpf: z.string().length(14, "CPF must be exactly 14 characters long")
 });
 
 export interface createUserDTOS {

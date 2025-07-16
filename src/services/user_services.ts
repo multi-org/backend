@@ -240,6 +240,12 @@ export class UserServices {
             throw new CustomError("User CPF not provided", 400);
         }
 
+        const ValidCpf = await validationCpf(userCpf);
+        if (ValidCpf.status !== 200) {
+            logger.warn(`Invalid CPF: ${userCpf}`);
+            throw new CustomError(ValidCpf.message, ValidCpf.status);
+        }
+
         const user = await this.getMe(userId);
         await enterpriseServices.findEnterpriseById(companyId);
 

@@ -1,6 +1,6 @@
 import { AuthRequest } from '@app/middlewares/global_middleware'
 import { Request, Response } from 'express';
-import {createUserZode, emailZode, UserAdressZode } from '@app/models/User_models'
+import {createUserZode, emailZode, UserAdressZode, userCpfZode } from '@app/models/User_models'
 import UserService from '@app/services/user_services';
 import { dataSave, delData, getData } from '@app/models/redis_models';
 import { randomUUID } from 'crypto';
@@ -211,6 +211,14 @@ class userController {
         const localFilePath = req.file.path;
 
         try {
+            const ValidCpf = await userCpfZode.safeParse(userCpf);
+            if (!ValidCpf.success) {
+                return res.status(400).json({
+                    message: "Invalid CPF",
+                    errors: ValidCpf.error.errors,
+                });
+            }
+
             const association = await UserService.requestAssociationUser(userId, companyId, userCpf, localFilePath);
             return res.status(201).json(association);
         } catch (error: any) {
