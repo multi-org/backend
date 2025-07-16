@@ -97,7 +97,8 @@ class EnterpriseController {
             });
         }
         try {
-            const response = await EnterpriseService.requestCompanyRegistration(result.data);
+            const userId = req.userId!;
+            const response = await EnterpriseService.requestCompanyRegistration(result.data, userId);
             return res.status(200).json({message: "Required data saved successfully", company: response});
         } catch (error: any) {
             const statusCode = error.status || 500;

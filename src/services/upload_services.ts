@@ -5,8 +5,41 @@ import { dataSave } from "@app/models/redis_models"
 
 import fs from "fs";
 import { logger, CustomError } from "@app/utils/logger";
+import path from "path";
+
 
 class uploadService {
+  private async cleanupTempDirectory(filePath: string): Promise<void> {
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        logger.info(`Temporary file removed: ${filePath}`);
+      }
+
+      const tempDir = path.dirname(filePath);
+      if (tempDir.includes('temp_uploads') && fs.existsSync(tempDir)) {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+        logger.info(`Temporary directory removed: ${tempDir}`);
+      }
+
+    } catch (error) {
+      logger.error(`Error removing temporary file: ${filePath}`, { error });
+    }
+  }
+
+  static async cleanupAllTempDirectories() {
+    const baseDir = path.resolve('temp_uploads');
+
+    if (!fs.existsSync(baseDir)) return;
+    
+    try {
+      fs.rmSync(baseDir, { recursive: true, force: true });
+      logger.info('All temp directories cleaned up');
+    } catch (error) {
+      logger.error('Error cleaning up all temp directories:', error);
+    }
+  }
+
   async uploadUserProfileImage(localFilePath: string, userId: string): Promise<any> {
     
     try {
@@ -41,16 +74,9 @@ class uploadService {
         throw new CustomError("Failed to add image URL to user", 500);
       }
 
-      // Remover arquivo local após sucesso completo
-      try {
-        fs.unlinkSync(localFilePath);
-        logger.info(`Local file removed: ${localFilePath}`);
-      } catch (unlinkError) {
-        logger.warn(`Failed to remove local file: ${unlinkError}`);
-        // Não falhar o job por isso
-      }
+      await this.cleanupTempDirectory(localFilePath);
 
-      logger.info(`User profile image URL added to user ${userId} in PostgreSQL`);
+      logger.info(`User profile image URL added in PostgreSQL`);
 
       return {
         success: true,
@@ -108,8 +134,7 @@ class uploadService {
 
     logger.info(`Document PDF uploaded to Cloudinary successfully`);
 
-    fs.unlinkSync(localFilePath);
-    logger.info(`Local file removed: ${localFilePath}`);
+    await this.cleanupTempDirectory(localFilePath);
 
     const associationData = {
         userId,
