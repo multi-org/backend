@@ -1,5 +1,6 @@
 import { logger } from './logger';
-import {cnpj, cpf} from 'cpf-cnpj-validator';
+import { cnpj, cpf } from 'cpf-cnpj-validator';
+import {EnterpriseDTOSWithAddress, createEnterpriseDTOS, companyAddress} from '@app/models/Enterprise_models'
 
 export const generateRandomCode = async () => {
     logger.info('Generating random code');
@@ -64,4 +65,32 @@ export const verifyBirthDate = async (birth: string) => {
     
     return {message: 'Valid birth date', status: 200};
     
- }
+}
+
+export async function extractCompanyData(enterpriseData: EnterpriseDTOSWithAddress): Promise<createEnterpriseDTOS> {
+    const { popularName, email, cnpj, phone, description, legalName, isMicroenterprise, legalRepresentatives } = enterpriseData;
+    return {
+        popularName: popularName.trim(),
+        email: email.toLowerCase().trim(),
+        cnpj: cnpj.trim(),
+        phone: phone.trim(),
+        description: description?.trim(),
+        legalName: legalName?.trim(),
+        isMicroenterprise,
+        legalRepresentatives: legalRepresentatives! || []
+    };
+}
+
+export async function extractAddressData(enterpriseData: EnterpriseDTOSWithAddress): Promise<companyAddress> {
+    const { street, number, complement, neighborhood, city, state, zipCode, country } = enterpriseData;
+    return {
+        street: street.trim(),
+        number: number.trim(),
+        complement: complement?.trim(),
+        neighborhood: neighborhood.trim(),
+        city: city.trim(),
+        state: state.trim(),
+        zipCode: zipCode.trim(),
+        country: country.trim()
+    };
+}

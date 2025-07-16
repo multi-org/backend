@@ -60,6 +60,11 @@ enum AddressType {
   SUBSIDIARY @map("filial")
   @@schema("multi")
 }
+enum OwnerType {
+  ENTERPRISE @map("empresa")
+  SUBSIDIARY @map("filial")
+  @@schema("multi")
+}
 
 model User {
   userId          String     @unique @id @default(uuid()) @db.Uuid
@@ -68,9 +73,10 @@ model User {
   email           String     @db.VarChar(255)
   profileImageUrl String?   @db.VarChar(1000)
   password        String     @db.VarChar(255)
-  cpf             String     @db.VarChar(255)
+  cpf             String     @db.VarChar(15)
   birthDate       DateTime   @db.Date
   status          Status     @default(ACTIVE)
+  preferences     Int[]
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @default(now()) @updatedAt
 
@@ -83,7 +89,6 @@ model User {
   Address Address?
   rents Rent[]
   Payment Payment[]
-  products Product[]
   enterpriseUserRoles enterpriseUserRoles[]
 
   @@map("users")
@@ -150,44 +155,49 @@ model enterpriseUserRoles {
   id Int @id @default(autoincrement()) @db.Integer
   userId String @db.Uuid
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
+  companyId String   @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   roleId Int
   role Role @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
+  @@unique([userId, companyId, roleId])
   @@map("enterprise_user_roles")
   @@schema("multi")
 }
 
-model Enterprise {
-  id            String   @id @default(uuid()) @db.Uuid
-  name          String   @db.VarChar(100)
-  email         String   @db.VarChar(50)
-  cnpj           String   @db.VarChar(18)
+model Company {
+  id                    String   @id @default(uuid()) @db.Uuid
+  popularName           String   @db.VarChar(100)
+  email                 String   @db.VarChar(50)
+  cnpj                  String   @db.VarChar(18)
   phone                 String   @db.VarChar(20)        
   description           String?  @db.VarChar(1000)        
-  mission               String?  @db.VarChar(255)         
+  legalName             String?  @db.VarChar(255)         
   isMicroenterprise     Boolean  @default(false)         
   status                Status   @default(ACTIVE)
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @default(now()) @updatedAt
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @default(now()) @updatedAt
   associateDiscountRate Decimal  @default(0.0) @db.Decimal(5, 4) 
+  createdBy             String   @db.Uuid
 
   legalRepresentatives    LegalRepresentative[]
   CompanyAssociates       CompanyAssociate[]
   Address                 Address?
   subsidiaries            Subsidiary[]
-  products                Product[]
+  enterpriseUserRoles enterpriseUserRoles[]
 
   @@map("enterprises")  
   @@schema("multi")
+  
   
 }
 
 model Subsidiary {
   id            String   @id @default(uuid()) @db.Uuid
-  enterpriseId  String   @db.Uuid
-  enterprise    Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  companyId    String   @db.Uuid
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   name         String?  @db.VarChar(100) 
   email        String?  @db.VarChar(50)  
   phone        String?  @db.VarChar(20)  
@@ -195,9 +205,9 @@ model Subsidiary {
   status       Status   @default(ACTIVE)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  createdBy    String   @db.Uuid
 
   Address Address?
-  products  Product[]
    
    @@map("subsidiaries")
    @@schema("multi")
@@ -205,29 +215,32 @@ model Subsidiary {
 
 
 model LegalRepresentative {
-  enterpriseId String     @db.Uuid
-  enterprise   Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  companyId String     @db.Uuid
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   userId       String     @db.Uuid 
-  user         User       @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
+  user         User       @relation(fields: [userId],references: [userId], onDelete: Cascade, onUpdate: Cascade)
+  documentUrl           String? @db.VarChar(1000) 
+  position            String? @db.VarChar(100)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
   @@map("legal_representatives")  
   @@schema("multi")
-  @@id([enterpriseId, userId])
+  @@id([companyId, userId])
 }
 
 model CompanyAssociate {
   userId                String  @db.Uuid
   user                  User     @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
-  registrationNumber    String @db.VarChar(10)
-  enterpriseId          String   @db.Uuid
-  enterprise            Enterprise @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  userCpf               String @db.VarChar(15)  
+  companyId             String   @db.Uuid
+  company               Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  documentUrl           String? @db.VarChar(1000) 
   createdAt             DateTime @default(now())
   updatedAt             DateTime @default(now()) @updatedAt
 
   @@schema("multi")
-  @@id([userId, enterpriseId])
+  @@id([userId, companyId])
   @@map("company_associates")
 }
 
@@ -240,7 +253,7 @@ model Address{
   neighborhood    String   @db.VarChar(100)
   city            String   @db.VarChar(100)
   state           String   @db.VarChar(100)
-  postalCode      String   @db.VarChar(20)
+  zipCode         String   @db.VarChar(20)
   country         String   @db.VarChar(100)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @default(now()) @updatedAt
@@ -248,8 +261,8 @@ model Address{
   userId          String?  @unique @db.Uuid
   user            User?    @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
 
-  enterpriseId    String?  @unique @db.Uuid
-  enterprise      Enterprise? @relation(fields: [enterpriseId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  companyId    String?  @unique @db.Uuid
+  company      Company? @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
 
   subsidiaryId    String?  @unique @db.Uuid
   subsidiary      Subsidiary? @relation(fields: [subsidiaryId], references: [id], onDelete: Cascade, onUpdate: Cascade)
@@ -278,25 +291,65 @@ model Payment {
 
 model Product {
   id            String      @id @default(uuid()) @db.Uuid
-  ownerId       String      @db.Uuid // Quem é o proprietário/anunciante do produto (User ou Enterprise/Subsidiary)
-  ownerType     String      @db.VarChar(50) // 'USER', 'ENTERPRISE', 'SUBSIDIARY' 
-  name          String      @db.VarChar(255)
-  description   String?     @db.VarChar(1000)
+  title         String      @db.VarChar(255) 
+  description   String      @db.VarChar(300)
+  ownerId       String      @db.Uuid 
+  ownerType     OwnerType
   type          ProductType
   basePrice     Decimal     @db.Decimal(10, 2) 
+  unity         String?    @db.VarChar(50) // Unidade de medida, ex: "hora", "dia", "mês"
+  category      String      @db.VarChar(500)
   imagesUrls    String[]    @default([]) @db.VarChar(1000)
   status        Status      @default(ACTIVE) 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  createdBy     String      @db.Uuid
 
-  rents         Rent[]
-  User User[]
-  Enterprise Enterprise[]
-  Subsidiary Subsidiary[]
-  ProductAvailability ProductAvailability[]
+  rents                   Rent[]
+  productAvailability     ProductAvailability[]
+
+  spaceProduct            SpaceProduct?
+  servicesProduct         ServicesProduct?
+  equipamentProduct       EquipamentProduct?
 
   @@map("products")  
   @@schema("multi")
+}
+
+model SpaceProduct{
+  id            String      @id @default(uuid()) @db.Uuid
+  productId     String      @unique @db.Uuid
+  product       Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  capacity      Int        
+  area          Float
+
+  @@schema("multi")
+  @@map("space_products")
+}
+
+model ServicesProduct{
+  id                        String      @id @default(uuid()) @db.Uuid
+  productId                 String      @unique @db.Uuid
+  product                   Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  durationMinutes           Int? @db.Integer // Duração em minutos
+  requirements              String?     @db.VarChar(500)
+  
+  @@schema("multi")
+  @@map("services_products")
+
+}
+
+model EquipamentProduct{
+  id             String      @id @default(uuid()) @db.Uuid
+  productId      String      @unique @db.Uuid
+  product        Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  brand          String?     @db.VarChar(100)
+  model          String?     @db.VarChar(100)
+  specifications String?     @db.VarChar(1000)
+  stock          Int         @default(0) 
+
+  @@schema("multi")
+  @@map("equipment_products")
 }
 
 model Rent {

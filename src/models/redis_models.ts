@@ -22,3 +22,8 @@ export const getData = async (prefix: string, key: string) => {
 export const delData = async (prefix: string, key: string) => {
     await client.DEL(`${prefix}:${key}`);
 }
+
+export const getKeysByPrefix = async (prefix: string) => {
+    const keys = await client.KEYS(`${prefix}:*`);
+    return keys.map(key => key.replace(`${prefix}:`, ''));
+}

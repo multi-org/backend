@@ -1,5 +1,5 @@
-import { PrismaClient } from "@prisma/client";
-import { createUserDTOS } from '@app/models/User_models';
+import { AddressType, PrismaClient } from "@prisma/client";
+import { createUserDTOS, UserAddress } from '@app/models/User_models';
 
 const prisma = new PrismaClient();
 
@@ -22,6 +22,26 @@ export class UserRepository {
         return user;
     }
 
+    async findUserByCpf(cpf: string) {
+        const user = await prisma.user.findFirst({
+            where: {
+                cpf: cpf,
+                status: 'ACTIVE'
+            }
+        })
+        return user;
+    }
+
+    async findUserByPhoneNumber(phoneNumber: string) {
+        const user = await prisma.user.findFirst({
+            where: {
+                phoneNumber: phoneNumber,
+                status: 'ACTIVE'
+            }
+        })
+        return user;
+    }
+
     async findUserById(userId: string) {
         const user = await prisma.user.findUnique({
             where: {
@@ -38,6 +58,7 @@ export class UserRepository {
                 isEmailVerified: true,
                 birthDate: true,
                 isPhoneVerified: true,
+                profileImageUrl: true,
                 userRoles: {
                     select: {
                         role: {
@@ -87,16 +108,6 @@ export class UserRepository {
         return user;
     }
 
-    async findUserRoleByName(name: string) {
-        const role = await prisma.role.findFirst({
-            where: {
-                name: name
-            }
-        })
-
-        return role;
-    }
-
     async assignRoleToUser(userId: string, roleId: number) { 
         return await prisma.userRole.create({
             data: {
@@ -104,6 +115,65 @@ export class UserRepository {
                 roleId: roleId
             }
         })
+    }
+
+    async createAdressUser(userId: string, addressData: UserAddress) {
+        return await prisma.address.create({
+            data: {
+                ...addressData,
+                userId: userId,
+                typeAddress: AddressType.USER
+            }
+        })
+    }
+
+    async findUserRole(userId: string) {
+        const userRole = await prisma.userRole.findFirst({
+            where: {
+                userId: userId
+            }
+        })
+        return userRole;
+    }
+    
+    async updateRoleUser(userId: string, role: number, userRole: number) {
+        const user = await prisma.userRole.update({
+            where: {
+                userId_roleId: {
+                    userId: userId,
+                    roleId: userRole
+                }
+            },
+            data: {
+                roleId: role
+            }
+        });
+
+        return user;
+    }
+
+    async addUserAsCompanyAssociate(userId: string, companyId: string, documentUrl: string, userCpf: string) {
+        const representative = await prisma.companyAssociate.create({
+            data: {
+                userId: userId,
+                companyId: companyId,
+                documentUrl: documentUrl,
+                userCpf: userCpf
+            }
+        });
+
+        return representative;
+    }
+
+    async addImageUser(userId: string, imagesUrls: string) {
+        return await prisma.user.update({
+            where: {
+                userId: userId
+            },
+            data: {
+                profileImageUrl: imagesUrls
+            }
+        });
     }
 
 }

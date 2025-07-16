@@ -4,10 +4,7 @@ import cors from 'cors';
 
 import { connectDatabase } from "./config/postgreConnect";
 import { connectRedis } from "./config/redis"
-import mainRouter from "./routes/index";
-import userRoutes from "./routes/user_routes";
-import enterpriseRoutes from "./routes/enterprise_routes";
-
+import mainRouter from "./routes/main_routes";
 
 const app = express();
 
@@ -26,8 +23,7 @@ connectRedis();
 
 app.use(express.json());
 app.use(cookieParser());
-// app.use(mainRouter);
-app.use("/users", userRoutes);
-app.use("/companies", enterpriseRoutes);
+app.use(mainRouter);
+
 
 export default app;

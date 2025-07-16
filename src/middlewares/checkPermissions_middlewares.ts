@@ -78,7 +78,7 @@ export const checkCompanyPermission = (requiredPermission: string) => {
                 throw new CustomError('User not found', 404);
             }
 
-            const isSystemAdmin = user.userRoles?.some(r => r.role.name === 'system_admin');
+            const isSystemAdmin = user.userRoles?.some(r => r.role.name === 'adminUser' || r.role.name === 'adminCompany');
             if (isSystemAdmin) {
                 logger.info(`RBAC: System admin autorizado para ${requiredPermission}.`);
                 return next();
@@ -95,7 +95,7 @@ export const checkCompanyPermission = (requiredPermission: string) => {
                 throw new CustomError(`Access denied for company: ${requiredPermission}`, 403);
             }
 
-            logger.info(`RBAC: Usuário autorizado para ${requiredPermission} na empresa ${companyId}.`);
+            logger.info(`RBAC: Usuário autorizado para ${requiredPermission}.`);
             next();
 
         } catch (error: any) {

@@ -6,25 +6,17 @@ const prisma = new PrismaClient();
 export async function createRolesSeed() {
     const roles = [
         {
-            name: 'system_admin',
+            name: 'adminUser',
             description: 'System Administrator with full access',
         },
         {
-            name: 'company_admin',
+            name: 'adminCompany',
             description: 'Company Administrator with access to company settings',
         },
         {
-            name: 'company_user',
-            description: 'Company User with limited access',
+            name: 'commonUser',
+            description: 'Common User with limited access',
         },
-        {
-            name: 'creator_company_subsidiary',
-            description: 'Creator Company Subsidiary with access to creator features',
-        },
-        {
-            name: 'associate',
-            description: 'Associate with limited access',
-        }
     ];
 
     await prisma.role.createMany({
@@ -37,6 +29,7 @@ export async function createRolesSeed() {
 
 export async function permissions() {
   const permissions = [
+  // CRUD Empresas
     {
       action: 'create',
       resource: 'company',
@@ -58,20 +51,19 @@ export async function permissions() {
       description: 'Allows deleting a company',
     },
     {
-      action: 'archived',
-      resource: 'company',
-      description: 'Allows archiving a company',
-    },
-    {
       action: 'manage',
       resource: 'company',
       description: 'Allows managing company settings and users',
     },
+    
+    // Convidar representante legal
     {
-      action: 'read',
-      resource: 'company_associate',
-      description: 'Allows reading company associate information',
+      action: 'invite',
+      resource: 'legal_representative',
+      description: 'Allows inviting a legal representative to the company',
     },
+
+    // CRUD Filiais
     {
       action: 'create',
       resource: 'company_subsidiary',
@@ -93,15 +85,105 @@ export async function permissions() {
       description: 'Allows deleting a company subsidiary',
     },
     {
-      action: 'archived',
-      resource: 'company_subsidiary',
-      description: 'Allows archiving a company subsidiary',
-    },
-    {
       action: 'manage',
       resource: 'company_subsidiary',
       description: 'Allows managing company subsidiary settings and users',
-    }
+    },
+
+    // CRUD Produtos
+    {
+      action: 'create',
+      resource: 'product',
+      description: 'Allows creating a product',
+    },
+    {
+      action: 'read',
+      resource: 'product',
+      description: 'Allows reading product information',
+    },
+    {
+      action: 'update',
+      resource: 'product',
+      description: 'Allows updating product information',
+    },
+    {
+      action: 'delete',
+      resource: 'product',
+      description: 'Allows deleting a product',
+    },
+    {
+      action: 'manage',
+      resource: 'product',
+      description: 'Allows managing product settings and categories',
+    },
+
+    // Associados
+
+    {
+      action: 'read',
+      resource: 'company_associate',
+      description: 'Allows reading company associate information',
+    },
+    {
+      action: "allow",
+      resource: "company_associate",
+      description: 'Allows creating a company associate',
+    },
+    {
+      action: 'delete',
+      resource: 'company_associate',
+      description: 'Allows deleting a company associate',
+    },
+
+    // Alugar espaços e produtos
+    {
+      action: 'rent',
+      resource: 'rent_product',
+      description: 'Allows renting a product',
+    },
+    {
+      action: 'rent',
+      resource: 'rent_space',
+      description: 'Allows renting a space',
+    },
+    {
+      action: 'cancel',
+      resource: 'rent_product',
+      description: 'Allows canceling a rented product',
+    },
+    {
+      action: 'cancel',
+      resource: 'rent_space',
+      description: 'Allows canceling a rented space',
+    },
+
+    // solicitações de registro
+    {
+      action: 'request_registration',
+      resource: 'company',
+      description: 'Allows requesting registration of a company',
+    },
+    {
+      action: 'request_registration',
+      resource: 'company_associate',
+      description: 'Allows requesting registration of a company associate',
+    },
+    {
+      action: 'get_all_requests',
+      resource: 'company',
+      description: 'Allows getting all company registration requests',
+    },
+     {
+      action: 'get_all_requests',
+      resource: 'company_associate',
+      description: 'Allows getting all company registration requests',
+    },
+    {
+      action: 'accept',
+      resource: 'company_associate',
+      description: 'Allows accepting a company associate request',
+    },
+
   ];
 
   await prisma.permission.createMany({
@@ -124,21 +206,30 @@ export async function RolesPermissions() {
   const permissionIds: number[] = permissions.map(p => p.id);
 
   const relations = permissionIds.map(pid => ({
-    roleId: roleIds['system_admin'],
+    roleId: roleIds['adminUser'],
     permissionId: pid,
   }));
 
-  [2, 3, 5, 6, 7, 8, 9, 10, 11, 12, 13].forEach(pid => {
-    relations.push({ roleId: roleIds['company_admin'], permissionId: pid });
-    });
+  // Adicionando permissões específicas para papel de administrador da empresa
+  const adminCompanyRelations = permissionIds
+    .filter(pid => pid !== 1)
+    .map(pid => ({
+      roleId: roleIds['adminCompany'],
+      permissionId: pid,
+  }));
+  relations.push(...adminCompanyRelations);
+
+  // Adicionando permissões para papel de usuário comum
+  const permissionsIdCommun = permissions
+    .filter(p => p.action === 'rent' || p.action === 'cancel' || p.action === 'request_registration' ? p.id : null)
+    .map(p => p.id);
   
-  relations.push({ roleId: roleIds['company_user'], permissionId: 2 });
-
-  [2, 3, 6, 7, 8, 9, 10, 11, 12].forEach(pid => {
-    relations.push({ roleId: roleIds['creator_company_subsidiary'], permissionId: pid });
+  permissionsIdCommun.forEach(pid => {
+    relations.push({
+      roleId: roleIds['commonUser'],
+      permissionId: pid
+    });
   });
-
-  relations.push({ roleId: roleIds['associate'], permissionId: 2 });
 
   await prisma.rolesPermission.createMany({
       data: relations,
