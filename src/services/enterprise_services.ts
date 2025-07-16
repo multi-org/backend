@@ -150,7 +150,7 @@ class EnterpriseServices {
         return { message: "Legal representative added successfully", representative: addLegalRepresentative };
     }
 
-    async requestCompanyRegistration(enterpriseData: EnterpriseDTOSWithAddress) {
+    async requestCompanyRegistration(enterpriseData: EnterpriseDTOSWithAddress, userId: string) {
         logger.info("Starting enterprise registration process");
 
         const isValidCnpj = await validationCnpj(enterpriseData.cnpj);
@@ -177,7 +177,7 @@ class EnterpriseServices {
             throw new CustomError("A request to create this company has already been registered", 500);
         }
 
-        const newCompanyRedisData = await dataSave({ prefix: 'company', key: enterpriseData.cnpj, value: enterpriseData, ttl: 2678400 });
+        const newCompanyRedisData = await dataSave({ prefix: 'company', key: enterpriseData.cnpj, value: {...enterpriseData, requestedBy: userId}, ttl: 2678400 });
         if( !newCompanyRedisData) {
             logger.error("Failed to save company data in Redis");
             throw new CustomError("Failed to save company data", 500);
@@ -201,11 +201,14 @@ class EnterpriseServices {
             const companyData = await getData('company', key);
             return { ...companyData, cnpj: key };
         }));
-
+        
         const companiesWithUserData = await Promise.all(
         companies.map(async (company) => {
             const userData = await useServices.getMe(company.requestedBy);
-            return company
+            const { requestedBy, ...companyWithoutUser } = company;
+            return { ...companyWithoutUser,
+                requestedByUser: { name: userData.name, userId: userData.id, email: userData.email }
+            };
         })
     );
 
