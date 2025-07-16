@@ -6,7 +6,7 @@ export const createEnterpriseZode = z.object({
     cnpj: z.string().min(18, "CNPJ must be at least 18 characters long"),
     phone: z.string().min(15, "Phone number must be at least 15 characters long"),
     description: z.string().optional(),
-    legalName: z.string().optional(),
+    legalName: z.string().min(1, "Legal company name is required"),
     isMicroenterprise: z.boolean(),
     street: z.string().min(1, "Street is required"),
     number: z.string().min(1, "Number is required"),

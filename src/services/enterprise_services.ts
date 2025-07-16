@@ -177,7 +177,8 @@ class EnterpriseServices {
             throw new CustomError("A request to create this company has already been registered", 500);
         }
 
-        const newCompanyRedisData = await dataSave({ prefix: 'company', key: enterpriseData.cnpj, value: {...enterpriseData, requestedBy: userId}, ttl: 2678400 });
+        const requiredAt = new Date().toLocaleString('pt-BR');
+        const newCompanyRedisData = await dataSave({ prefix: 'company', key: enterpriseData.cnpj, value: {...enterpriseData, requestedBy: userId, requiredAt}, ttl: 2678400 });
         if( !newCompanyRedisData) {
             logger.error("Failed to save company data in Redis");
             throw new CustomError("Failed to save company data", 500);
