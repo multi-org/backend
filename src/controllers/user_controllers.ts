@@ -143,7 +143,7 @@ class userController {
 
             res.status(200).json({
                 message: "Login successful",
-                userName: user.userName,
+                user
             });
         }catch (error: any) {
             const statusCode = error.status || 500;

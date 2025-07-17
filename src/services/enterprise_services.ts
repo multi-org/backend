@@ -171,13 +171,19 @@ class EnterpriseServices {
             throw new CustomError("CNPJ already registered", 400);
         }
 
+        const existingEnterpriseWithPhone = await enterpriseRepository.findEnterpriseByPhone(enterpriseData.phone);
+        if (existingEnterpriseWithPhone) {
+            logger.warn(`Enterprise with phone ${enterpriseData.phone} already exists`);
+            throw new CustomError("Phone already registered", 400); 
+        };
+
         const requestCompanyRegistration = await getData('company', enterpriseData.cnpj);
         if (requestCompanyRegistration) {
             logger.error("A request to create this company has already been registered");
             throw new CustomError("A request to create this company has already been registered", 500);
         }
 
-        const requiredAt = new Date().toLocaleString('pt-BR');
+        const requiredAt = new Date().toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'});
         const newCompanyRedisData = await dataSave({ prefix: 'company', key: enterpriseData.cnpj, value: {...enterpriseData, requestedBy: userId, requiredAt}, ttl: 2678400 });
         if( !newCompanyRedisData) {
             logger.error("Failed to save company data in Redis");
@@ -205,13 +211,28 @@ class EnterpriseServices {
         
         const companiesWithUserData = await Promise.all(
         companies.map(async (company) => {
-            const userData = await useServices.getMe(company.requestedBy);
+            const userData = await userRepository.findUserById(company.requestedBy);
             const { requestedBy, ...companyWithoutUser } = company;
+
+            if (!userData) {
+                logger.warn(`User not found for company request: ${company.requestedBy} - Possible bot activity`);
+                return {
+                    ...companyWithoutUser,
+                    requestedByUser: {
+                        name: "⚠️ USUÁRIO REMOVIDO/INEXISTENTE", 
+                        userId: company.requestedBy, 
+                        email: "❌ Possível atividade de BOT detectada",
+                        status: "SUSPICIOUS_REQUEST",
+                        alert: "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema"
+                    }
+                };
+            }
             return { ...companyWithoutUser,
-                requestedByUser: { name: userData.name, userId: userData.id, email: userData.email }
+                requestedByUser: { name: userData?.name, userId: userData?.userId, email: userData?.email }
             };
         })
-    );
+        );
+
 
         return companiesWithUserData;
     }

@@ -170,11 +170,14 @@ export class UserServices {
             throw new CustomError("Failed to generate JWT token", 500);
         }
 
+        const userRoles = await userRepository.findUserById(user.userId);
+
         logger.info("User logged in successfully");
         return {
-            message: "Login successful",
             token,
             userName: user.name,
+            photoPerfil: user.profileImageUrl ? user.profileImageUrl : null,
+            userRoles: userRoles?.userRoles ? userRoles.userRoles.map(role => role.role.name) : [],
         }
     }
 
