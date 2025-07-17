@@ -112,6 +112,26 @@ class ProdutoController {
       });
     }
   }
+
+  static async getProductsMultipleFields(req: AuthRequest, res: Response) {
+    try {
+      const { search } = req.query;
+      const products = await productServices.searchProductsMultipleFields(search as string);
+
+      return res.status(200).json({
+        success: true,
+        message: "Produtos encontrados com sucesso",
+        data: products,
+      });
+
+    } catch (error: any) {
+      const statusCode = error.status || 500;
+      return res.status(statusCode).json({
+        success: false,
+        message: error.message || "Erro interno do servidor",
+      });
+    }
+  }
 }
 
 export default ProdutoController;

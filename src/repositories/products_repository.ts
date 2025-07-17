@@ -37,7 +37,6 @@ export class ProductsRepository {
         return availabilityRecords;
     }
 
-
     async createProduct(productData: ProductCreateInput, userId: string, ownerId: string) { 
         const { title, description, type, basePrice, category, imagesUrls, ownerType, unity, billingModel, weeklyAvailability } = productData;
 
@@ -279,6 +278,41 @@ export class ProductsRepository {
         });
 
         return availability;
+    }
+
+    async searchProductsMultipleFields(searchTerm: string) {
+        return await prisma.product.findMany({
+            where: {
+                OR: [
+                    {
+                        title: {
+                            contains: searchTerm,
+                            mode: 'insensitive'
+                        }
+                    },
+                    {
+                        description: {
+                            contains: searchTerm,
+                            mode: 'insensitive'
+                        }
+                    },
+                    {
+                        category: {
+                            contains: searchTerm,
+                            mode: 'insensitive'
+                        }
+                    }
+                ],
+                status: 'ACTIVE'
+            },
+            take: 10,
+            include: {
+                equipamentProduct: true,
+                spaceProduct: true,
+                servicesProduct: true,
+                productAvailability: true,
+            }
+        })
     }
 }
 

@@ -185,6 +185,23 @@ class ProductsServices {
 
     }
 
+    async searchProductsMultipleFields(search: string) {
+        logger.info("Searching products by multiple fields");
+
+        if (!search || search.trim() === '') {
+            logger.warn('No search term provided');
+            throw new CustomError("Search term is required", 400);
+        }
+
+        const products = await productRepository.searchProductsMultipleFields(search);
+        if (!products || products.length === 0) {
+            logger.warn("No products found for the given search term", { search });
+            throw new CustomError("Nenhum produto encontrado para o termo de pesquisa fornecido", 404);
+        }   
+
+        return products;
+    }
+
     private async validateSpecificProductData(productData: ProductCreateInput) {
         switch (productData.type) {
             case "SPACE":

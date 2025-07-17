@@ -8,6 +8,7 @@ const routes = express.Router();
 routes.post("/:companyId", jwtRequired, checkCompanyPermission("create:product"), ProdutoController.createProduct);
 routes.get("/:ownerId", jwtRequired, ProdutoController.getProducts);
 routes.get("/details/:productId", jwtRequired, ProdutoController.getProductById);
+routes.get("/search/:search", jwtRequired, ProdutoController.getProductsMultipleFields);
 
 export default routes;
 
