@@ -66,6 +66,17 @@ enum OwnerType {
   @@schema("multi")
 }
 
+enum BillingModel{
+  POR_DIA @map("por dia")
+  POR_HORA @map("por hora")
+  POR_MES @map("por mês")
+  FIXO @map("fixo")
+  AMBOS @map("ambos") // Para equipamentos que podem ser por hora ou dia
+
+  @@schema("multi")
+}
+
+
 model User {
   userId          String     @unique @id @default(uuid()) @db.Uuid
   name            String     @db.VarChar(255)
@@ -297,7 +308,8 @@ model Product {
   ownerType     OwnerType
   type          ProductType
   basePrice     Decimal     @db.Decimal(10, 2) 
-  unity         String?    @db.VarChar(50) // Unidade de medida, ex: "hora", "dia", "mês"
+  unity         String?     @db.VarChar(50) // UNIDADE
+  billingModel  BillingModel @default(POR_DIA)
   category      String      @db.VarChar(500)
   imagesUrls    String[]    @default([]) @db.VarChar(1000)
   status        Status      @default(ACTIVE) 
@@ -305,14 +317,30 @@ model Product {
   updatedAt     DateTime    @updatedAt
   createdBy     String      @db.Uuid
 
-  rents                   Rent[]
-  productAvailability     ProductAvailability[]
+  rents                     Rent[]
+  productAvailability       ProductAvailability[]
+  ProductWeeklyAvailability ProductWeeklyAvailability[]
 
-  spaceProduct            SpaceProduct?
-  servicesProduct         ServicesProduct?
-  equipamentProduct       EquipamentProduct?
+  spaceProduct              SpaceProduct?
+  servicesProduct           ServicesProduct?
+  equipamentProduct         EquipamentProduct?
 
   @@map("products")  
+  @@schema("multi")
+}
+
+model ProductWeeklyAvailability{
+  productId   String      @db.Uuid
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  dayOfWeek   Int         // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+  startTime   String      @db.VarChar(5) // Formato HH:MM
+  endTime     String      @db.VarChar(5) // Formato HH:MM
+  isAvailable Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@id([productId, dayOfWeek])
+  @@map("product_weekly_availabilities")
   @@schema("multi")
 }
 

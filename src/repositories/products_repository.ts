@@ -1,14 +1,48 @@
 import { PrismaClient } from "@prisma/client";
-import { ProductCreateInput } from "@app/models/Product_models";
+import { ProductCreateInput, WeeklyAvailability } from "@app/models/Product_models";
 
 const prisma = new PrismaClient();
 
 export class ProductsRepository {
 
+   private createWeeklyAvailabilityRecords(productId: string, weeklyAvailability: WeeklyAvailability) {
+        if (!weeklyAvailability) return [];
+
+        const availabilityRecords = [];
+        const dayMap = {
+            sunday: 0,
+            monday: 1,
+            tuesday: 2,
+            wednesday: 3,
+            thursday: 4,
+            friday: 5,
+            saturday: 6,
+        };
+
+        for (const [day, config] of Object.entries(weeklyAvailability)) {
+            if (config && config.available) {
+                const dayIndex = dayMap[day as keyof typeof dayMap];
+                if (dayIndex !== undefined) {
+                    availabilityRecords.push({
+                        productId,
+                        dayOfWeek: dayIndex,
+                        startTime: config.start,
+                        endTime: config.end,
+                        isAvailable: config.available
+                    });
+                }
+            }
+        }
+
+        return availabilityRecords;
+    }
+
+
     async createProduct(productData: ProductCreateInput, userId: string, ownerId: string) { 
-        const { title, description, type, basePrice, category, imagesUrls, ownerType, unity  } = productData;
-        
+        const { title, description, type, basePrice, category, imagesUrls, ownerType, unity, billingModel, weeklyAvailability } = productData;
+
         const result = await prisma.$transaction(async (tx) => {
+            
             const product = await tx.product.create({
                 data: {
                     title,
@@ -16,14 +50,16 @@ export class ProductsRepository {
                     type,
                     basePrice,
                     category,
-                    imagesUrls,
+                    imagesUrls: imagesUrls || [],
                     ownerId,
                     ownerType,
                     unity,
+                    billingModel,
                     createdBy: userId,
                 },
             });
 
+            // Criar produto específico baseado no tipo
             let specificProduct;
             switch (type) {
                 case "SPACE":
@@ -38,8 +74,7 @@ export class ProductsRepository {
                     break;
                 
                 case "SERVICE":
-                    const { durationMinutes, requirements } = productData.serviceDetails;
-                    
+                    const { durationMinutes, requirements } = productData.serviceDetails || {};
                     specificProduct = await tx.servicesProduct.create({
                         data: {
                             productId: product.id,
@@ -51,7 +86,6 @@ export class ProductsRepository {
                 
                 case "EQUIPAMENT":
                     const { brand, model, specifications, stock } = productData.equipmentDetails;
-                    
                     specificProduct = await tx.equipamentProduct.create({
                         data: {
                             productId: product.id,
@@ -65,6 +99,17 @@ export class ProductsRepository {
                 
                 default:
                     throw new Error("Type of Product Invalid")
+            }
+
+            // Criar registros de disponibilidade semanal
+            if (weeklyAvailability) {
+                const weeklyAvailabilityRecords = this.createWeeklyAvailabilityRecords(product.id, weeklyAvailability);
+
+                if (weeklyAvailabilityRecords.length > 0) {
+                    await tx.productWeeklyAvailability.createMany({
+                        data: weeklyAvailabilityRecords
+                    });
+                }
             }
 
             return { product, specificProduct }
@@ -84,12 +129,156 @@ export class ProductsRepository {
         return product;
     }
 
-    async deleteProduct(productId: string) {
-        const deleteProduct = await prisma.product.delete({
+    async findProductById(productId: string) {
+        const product = await prisma.product.findUnique({
             where: {
                 id: productId
+            },
+            include: {
+                spaceProduct: true,
+                servicesProduct: true,
+                equipamentProduct: true,
+                productAvailability: true,
+                ProductWeeklyAvailability: true,
+            }
+        })
+
+        return product;
+    }
+
+    async findProductsByOwnerId(ownerId: string, page: number = 1, limit: number = 10) {
+        const skip = (page - 1) * limit;
+
+        const [products, total] = await Promise.all([
+            prisma.product.findMany({
+                where: {
+                    ownerId,
+                    status: "ACTIVE"
+                },
+                include: {
+                    spaceProduct: true,
+                    servicesProduct: true,
+                    equipamentProduct: true,
+                },
+                skip,
+                take: limit,
+                orderBy: {
+                    createdAt: "desc"
+                }
+            }),
+            prisma.product.count({
+                where: {
+                    ownerId,
+                    status: "ACTIVE"
+                }
+            })
+        ])
+
+        return {
+            products,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages: Math.ceil(total / limit)
+            }
+        };
+    }
+
+    async updateProduct(productId: string, updateData: Partial<ProductCreateInput>) {
+        const { title, description, type, basePrice, category, imagesUrls, ownerType, unity, billingModel, weeklyAvailability, ...specificData } = updateData;
+
+        const result = await prisma.$transaction(async (tx) => {
+           
+            const product = await tx.product.update({
+                where: { id: productId},
+                data: {
+                    ...(title && { title }),
+                    ...(description && { description }),
+                    ...(basePrice && { basePrice }),
+                    ...(category && { category }),
+                    ...(imagesUrls && { imagesUrls }),
+                    ...(unity && { unity }),
+                    ...(billingModel && { billingModel }),
+                },
+            });
+            
+            // Atualizar disponibilidade semanal se fornecida
+            if (weeklyAvailability) {
+                // Remover disponibilidades existentes
+                await tx.productWeeklyAvailability.deleteMany({
+                    where: { productId }
+                });
+
+                // Criar novas disponibilidades
+                const weeklyAvailabilityRecords = this.createWeeklyAvailabilityRecords(productId, weeklyAvailability);
+
+                if (weeklyAvailabilityRecords.length > 0) {
+                    await tx.productWeeklyAvailability.createMany({
+                        data: weeklyAvailabilityRecords
+                    });
+                }
+            }
+
+            return product;
+        });
+
+        return result;
+    }
+
+    async deleteProduct(productId: string) {
+        const deleteProduct = await prisma.product.update({
+            where: {
+                id: productId
+            },
+            data: {
+                status: "DELETED"
             }
         });
+
+        return deleteProduct;
+    }
+
+    async getProductAvailability(productId: string, startDate: Date, endDate: Date) {
+        const availability = await prisma.productAvailability.findMany({
+            where: {
+                productId,
+                startDate: {
+                    lte: endDate
+                },
+                endDate: {
+                    gte: startDate
+                }
+            },
+            orderBy: {
+                startDate: 'asc'
+            }
+        });
+
+        const weeklyAvailability = await prisma.productWeeklyAvailability.findMany({
+            where: {
+                productId
+            },
+            orderBy: {
+                dayOfWeek: 'asc'
+            }
+        });
+
+        return {
+            specificAvailability: availability,
+            weeklyAvailability
+        };
+    }
+
+    async createProductAvailability(productId: string, availabilityData: { startDate: Date, endDate: Date, isAvaliable: boolean, priceOverride?: number }) {
+        const availability = await prisma.productAvailability.create({
+            data: {
+                productId,
+                ...availabilityData
+            }
+        });
+
+        return availability;
     }
 }
 
