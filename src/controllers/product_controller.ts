@@ -1,11 +1,13 @@
-import {validateProductCreation, ProductCreateInput} from "../models/Product_models";
+import {
+  validateProductCreation,
+  ProductCreateInput,
+} from "../models/Product_models";
 import { AuthRequest } from "@app/middlewares/global_middleware";
-import { Response, Request} from "express";
+import { Response, Request } from "express";
 
-import productServices from '@app/services/products_services';
+import productServices from "@app/services/products_services";
 
 class ProdutoController {
-
   static async createProduct(req: AuthRequest, res: Response) {
     try {
       const response = validateProductCreation(req.body);
@@ -26,17 +28,20 @@ class ProdutoController {
           message: "ID do proprietário é obrigatório",
         });
       }
-      
+
       const productData: ProductCreateInput = response.data;
 
-      const createProduct = await productServices.createProduct(productData, ownerId, userId);
+      const createProduct = await productServices.createProduct(
+        productData,
+        ownerId,
+        userId
+      );
 
       return res.status(200).json({
         success: true,
         message: "Produto criado com sucesso",
-        data: createProduct
+        data: createProduct,
       });
-
     } catch (error: any) {
       const statusCode = error.status || 500;
       return res.status(statusCode).json({
@@ -45,7 +50,7 @@ class ProdutoController {
     }
   }
 
-  static async listProducts(req: AuthRequest, res: Response) {
+  static async getProducts(req: AuthRequest, res: Response) {
     try {
       const { ownerId } = req.params;
       const page = parseInt(req.query.page as string) || 1;
@@ -58,13 +63,44 @@ class ProdutoController {
         });
       }
 
-      const result = await productServices.getProductsByOwner(ownerId, page, limit);
+      const result = await productServices.getProductsByOwner(
+        ownerId,
+        page,
+        limit
+      );
 
       return res.status(200).json({
         success: true,
         message: "Produtos listados com sucesso",
         data: result.products,
-        pagination: result.pagination
+        pagination: result.pagination,
+      });
+    } catch (error: any) {
+      const statusCode = error.status || 500;
+      return res.status(statusCode).json({
+        success: false,
+        message: error.message || "Erro interno do servidor",
+      });
+    }
+  }
+
+  static async getProductById(req: AuthRequest, res: Response) { 
+    try {
+      const { productId } = req.params;
+
+      if (!productId) {
+        return res.status(400).json({
+          success: false,
+          message: "ID do produto é obrigatório",
+        });
+      }
+
+      const product = await productServices.getProductById(productId);
+
+      return res.status(200).json({
+        success: true,
+        message: "Produto encontrado com sucesso",
+        data: product
       });
 
     } catch (error: any) {
@@ -75,7 +111,6 @@ class ProdutoController {
       });
     }
   }
-
 }
 
 export default ProdutoController;

@@ -3,6 +3,8 @@ import { ProductCreateInput, validateWeeklyAvailability } from "@app/models/Prod
 
 import productRepository from "@app/repositories/products_repository";
 import enterpriService from './enterprise_services';
+import userRepository from "@app/repositories/user_repository";
+import { Product } from "@prisma/client";
 
 class ProductsServices {
 
@@ -65,8 +67,33 @@ class ProductsServices {
 
         const result = await productRepository.findProductsByOwnerId(ownerId, page, limit);
 
+        const productsWithUserData = await this.productWithUserData(result.products[0]);
+
         logger.info("Products fetched successfully");
-        return result;
+        return {
+            ...result,
+            products: productsWithUserData
+        };
+    }
+
+    async getProductById(productId: string) {
+        logger.info("Fetching product by ID", { productId });
+
+        const product = await productRepository.findProductById(productId);
+        
+        if (!product) {
+            logger.error("Product not found", { productId });
+            throw new CustomError("Produto não encontrado", 404);
+        }
+
+        if (product.status === 'DELETED') {
+            logger.error("Product is deleted", { productId });
+            throw new CustomError("Produto foi excluído", 410);
+        }
+
+        const productWithUserData = await this.productWithUserData(product);
+
+        return productWithUserData;
     }
 
     private async validateSpecificProductData(productData: ProductCreateInput) {
@@ -99,6 +126,26 @@ class ProductsServices {
                 logger.error("Invalid product type provided", { productType: productData });
                 throw new CustomError("Invalid product type provided", 400);
         }
+    }
+
+    private async productWithUserData(product: Product) {
+        const productWtihUserData = await userRepository.findUserById(product.createdBy);
+
+        logger.info("Products fetched successfully");
+        return {
+            ...product,
+            createdBy: productWtihUserData ? {
+                name: productWtihUserData.name,
+                userId: productWtihUserData.userId,
+                email: productWtihUserData.email
+            } : {
+                name: "⚠️ USUÁRIO REMOVIDO/INEXISTENTE",
+                userId: product.createdBy,
+                email: "❌ Possível atividade de BOT detectada",
+                status: "SUSPICIOUS_REQUEST",
+                alert: "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema"
+            }
+        };
     }
 }
 
