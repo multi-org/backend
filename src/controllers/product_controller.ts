@@ -5,26 +5,37 @@ import { Response, Request} from "express";
 import productServices from '@app/services/products_services';
 
 class ProdutoController {
-  static async createProduct(req: AuthRequest, res: Response) {
-    const response = validateProductCreation(req.body);
-    if (!response.success) {
-      return res.status(400).json({
-        message: "Validation failed",
-        errors: response.error.flatten().fieldErrors || {},
-      });
-    }
 
+  static async createProduct(req: AuthRequest, res: Response) {
     try {
-      const userId = req.userId!;
-      const { ownerId } = req.params;
-      
-      const productData: ProductCreateInput = {
-        ...response.data,
+      const response = validateProductCreation(req.body);
+      if (!response.success) {
+        return res.status(400).json({
+          satisfies: false,
+          message: "Validation failed",
+          errors: response.error.flatten().fieldErrors || {},
+        });
       }
+
+      const userId = req.userId!;
+      const ownerId = req.params.companyId;
+
+      if (!ownerId) {
+        return res.status(400).json({
+          success: false,
+          message: "ID do proprietário é obrigatório",
+        });
+      }
+      
+      const productData: ProductCreateInput = response.data;
 
       const createProduct = await productServices.createProduct(productData, ownerId, userId);
 
-      return res.status(200).json(createProduct)
+      return res.status(200).json({
+        success: true,
+        message: "Produto criado com sucesso",
+        data: createProduct
+      });
 
     } catch (error: any) {
       const statusCode = error.status || 500;
@@ -34,21 +45,36 @@ class ProdutoController {
     }
   }
 
-  static async listarProdutos(req: AuthRequest, res: Response) {
-  }
+  static async listProducts(req: AuthRequest, res: Response) {
+    try {
+      const { ownerId } = req.params;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 10;
 
-  static async listarProdutoPorNomeOuId(req: AuthRequest, res: Response) {
-    
-  }
+      if (!ownerId) {
+        return res.status(400).json({
+          success: false,
+          message: "ID do proprietário é obrigatório",
+        });
+      }
 
-  static async atualizarProduto(req: Request, res: Response) {
-    
-  }
+      const result = await productServices.getProductsByOwner(ownerId, page, limit);
 
-  static async deletarProduto(req: Request, res: Response) {
-    
-  }
+      return res.status(200).json({
+        success: true,
+        message: "Produtos listados com sucesso",
+        data: result.products,
+        pagination: result.pagination
+      });
 
+    } catch (error: any) {
+      const statusCode = error.status || 500;
+      return res.status(statusCode).json({
+        success: false,
+        message: error.message || "Erro interno do servidor",
+      });
+    }
+  }
 
 }
 

@@ -5,11 +5,8 @@ import { checkCompanyPermission } from "@app/middlewares/checkPermissions_middle
 
 const routes = express.Router();
 
-routes.post("/:companyId/:ownerId", jwtRequired, checkCompanyPermission('create:product'), ProdutoController.createProduct);
-routes.get("/produtos", jwtRequired, checkCompanyPermission, ProdutoController.listarProdutos);
-routes.get("/produtos/nomeOuId", jwtRequired, checkCompanyPermission, ProdutoController.listarProdutoPorNomeOuId);
-routes.put("/produtos/:id", jwtRequired, checkCompanyPermission, ProdutoController.atualizarProduto);
-routes.delete("/produtos/:id", jwtRequired, checkCompanyPermission, ProdutoController.deletarProduto);
+routes.post("/:companyId", jwtRequired, checkCompanyPermission('create:product'), ProdutoController.createProduct);
+routes.get("/:ownerId", jwtRequired, ProdutoController.listProducts);
 
 export default routes;
 

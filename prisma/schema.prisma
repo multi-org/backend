@@ -71,6 +71,7 @@ enum BillingModel{
   POR_HORA @map("por hora")
   POR_MES @map("por mês")
   FIXO @map("fixo")
+  AMBOS @map("ambos") // Para equipamentos que podem ser por hora ou dia
 
   @@schema("multi")
 }
@@ -307,7 +308,7 @@ model Product {
   ownerType     OwnerType
   type          ProductType
   basePrice     Decimal     @db.Decimal(10, 2) 
-  unity         String?    @db.VarChar(50) // UNIDADE
+  unity         String?     @db.VarChar(50) // UNIDADE
   billingModel  BillingModel @default(POR_DIA)
   category      String      @db.VarChar(500)
   imagesUrls    String[]    @default([]) @db.VarChar(1000)
@@ -316,13 +317,13 @@ model Product {
   updatedAt     DateTime    @updatedAt
   createdBy     String      @db.Uuid
 
-  rents                   Rent[]
-  productAvailability     ProductAvailability[]
+  rents                     Rent[]
+  productAvailability       ProductAvailability[]
   ProductWeeklyAvailability ProductWeeklyAvailability[]
 
-  spaceProduct            SpaceProduct?
-  servicesProduct         ServicesProduct?
-  equipamentProduct       EquipamentProduct?
+  spaceProduct              SpaceProduct?
+  servicesProduct           ServicesProduct?
+  equipamentProduct         EquipamentProduct?
 
   @@map("products")  
   @@schema("multi")
