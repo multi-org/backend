@@ -270,7 +270,7 @@ export class ProductsRepository {
         };
     }
 
-    async createProductAvailability(productId: string, availabilityData: { startDate: Date, endDate: Date, isAvaliable: boolean, priceOverride?: number }) {
+    async createProductAvailability(productId: string, availabilityData: { startDate: Date, endDate: Date, isAvailable: boolean, priceOverride?: number }) {
         const availability = await prisma.productAvailability.create({
             data: {
                 productId,

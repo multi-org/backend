@@ -96,6 +96,95 @@ class ProductsServices {
         return productWithUserData;
     }
 
+    async updateProduct(productId: string, updateData: Partial<ProductCreateInput>, userId: string) {
+        logger.info("Starting product update process");
+
+        const existingProduct = await this.getProductById(productId);
+
+        if(updateData.weeklyAvailability && !validateWeeklyAvailability(updateData.weeklyAvailability)) {
+            logger.error("Invalid weekly availability provided");
+            throw new CustomError("Horários de disponibilidade inválidos. Horário de início deve ser menor que o de fim.", 400);
+        }
+
+        if (updateData.title && updateData.title !== existingProduct.title) {
+            const existing = await productRepository.findProductByTitleOwnerIdAndType(updateData.title, existingProduct.ownerId, existingProduct.type);
+
+            if (existing && existing.id !== productId) {
+                logger.error("Product with this title already exists for this enterprise", { title: updateData.title });
+                throw new CustomError("Product with this title already exists for this enterprise", 409);
+            }
+        }
+
+        const update = await productRepository.updateProduct(productId, updateData);
+        if (!update) {
+            logger.error("Product update failed - repository returned null", { productId });
+            throw new CustomError("Product update failed", 500);
+        }
+
+        logger.info("Product updated successfully", { productId, updateData });
+        return update;
+    }
+
+    async deleteProduct(productId: string, userId: string) {
+        logger.info("Starting product deletion process")
+
+        await this.getProductById(productId);
+
+        const deleted = await productRepository.deleteProduct(productId);
+        if (!deleted) {
+            logger.error("Product deletion failed - repository returned null", { productId });
+            throw new CustomError("Product deletion failed", 500);
+        }
+        logger.info("Product deleted successfully", { productId });
+        return deleted;
+    }
+
+    async getProductAvailability(productId: string, starDate: Date, endDate: Date) {
+        logger.info("Fetching product availability");
+
+        await this.getProductById(productId);
+
+        const availability = await productRepository.getProductAvailability(productId, starDate, endDate);
+        if (!availability) {
+            logger.error("No availability found for this product", { productId });
+            throw new CustomError("Nenhuma disponibilidade encontrada para este produto", 404);
+        }
+
+        logger.info("Product availability fetched successfully", { productId });
+        return availability;
+    }
+
+    async setProductAvailability(productId: string, availabilityData: {
+        startDate: Date;
+        endDate: Date;
+        isAvailable: boolean;
+        priceOverride?: number;
+    }) {
+        logger.info("Setting product availability");
+
+        await this.getProductById(productId);
+
+        if (availabilityData.startDate >= availabilityData.endDate) {
+            logger.error("Start date must be before end date", { availabilityData });
+            throw new CustomError("A data de início deve ser anterior à data de término", 400);
+        }
+
+        if (availabilityData.priceOverride && availabilityData.priceOverride < 0) {
+            logger.error("Price override must be a non-negative number", { priceOverride: availabilityData.priceOverride });
+            throw new CustomError("O preço deve ser um número não negativo", 400);
+        }
+
+        const availability = await productRepository.createProductAvailability(productId, availabilityData);
+        if (!availability) {
+            logger.error("Failed to set product availability - repository returned null", { productId });
+            throw new CustomError("Falha ao definir disponibilidade do produto", 500);
+        }
+
+        logger.info("Product availability set successfully", { productId, availabilityData });
+        return availability;
+
+    }
+
     private async validateSpecificProductData(productData: ProductCreateInput) {
         switch (productData.type) {
             case "SPACE":

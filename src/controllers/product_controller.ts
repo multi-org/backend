@@ -8,6 +8,7 @@ import { Response, Request } from "express";
 import productServices from "@app/services/products_services";
 
 class ProdutoController {
+
   static async createProduct(req: AuthRequest, res: Response) {
     try {
       const response = validateProductCreation(req.body);

@@ -5,6 +5,7 @@ import EnterpriseService from "@app/services/enterprise_services";
 import jwt from 'jsonwebtoken';
 
 class EnterpriseController { 
+
     async createCompany(req: AuthRequest, res: Response) {
         const result = createEnterpriseZode.safeParse(req.body);
         if (!result.success) {
@@ -154,7 +155,6 @@ class EnterpriseController {
             });
         }
     }
-
 }
 
 export default new EnterpriseController();
