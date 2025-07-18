@@ -2,6 +2,7 @@ import cloudinary from "@app/config/cloudinary";
 import userRepository from "@app/repositories/user_repository";
 import productsRepository from "@app/repositories/products_repository";
 import { dataSave } from "@app/models/redis_models"
+import { UploadApiResponse } from 'cloudinary';
 
 import fs from "fs";
 import { logger, CustomError } from "@app/utils/logger";
@@ -91,27 +92,41 @@ class uploadService {
     }
   }
 
-  async uploadProductImage(localFilePath: string, productId: string): Promise<any>{
+  async uploadProductImage(localFilePath: string[], productId: string): Promise<any>{
+
     try {
-      if (!fs.existsSync(localFilePath)) {
-        logger.error(`File not found: ${localFilePath}`);
-        throw new CustomError('Arquivo não encontrado para upload', 404);
+      for (const filePath of localFilePath) {
+        if (!fs.existsSync(filePath)) {
+          logger.error(`File not found: ${filePath}`);
+          throw new CustomError('Arquivo não encontrado para upload', 404);
+        }
       }
 
       logger.info(`Starting upload for product image: ${productId}`);
 
-      const result = await cloudinary.uploader.upload(localFilePath, {
-        folder: `products/${productId}`,
-        public_id: `product_${productId}_${Date.now()}`,
-        resource_type: "image",
-        transformation: [
-          { width: 800, height: 600, crop: "limit" },
-          { quality: "auto" },
-          { format: "webp"} // otimizar o formato
-        ],
+      const uploadPromises = localFilePath.map(filePath => {
+        return cloudinary.uploader.upload(filePath, {
+          folder: `products/${productId}`,
+          public_id: `product_${productId}_${Date.now()}`,
+          resource_type: "image",
+          transformation: [
+            { width: 800, height: 600, crop: "limit" },
+            { quality: "auto" },
+            { format: "webp"} // otimizar o formato
+          ],
+        });
       });
 
-      logger.info(`Product image uploaded to Cloudinary successfully: ${result.secure_url}`);
+      const results = await Promise.all(uploadPromises);
+      const imagesUrls = results.map((result: UploadApiResponse) => result.secure_url);
+
+      logger.info(`Product image uploaded to Cloudinary successfully: ${imagesUrls.join(', ')}`);
+
+      const updateImagesProduct = await productsRepository.uploadImagesProducts(productId, imagesUrls);
+      if (!updateImagesProduct) {
+        logger.error(`Failed to update product images in database for product: ${productId}`);
+        throw new CustomError("Failed to update product images in database", 500);
+      }
 
     } catch (error) {
       logger.error('Error uploading product image in service', { error });

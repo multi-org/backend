@@ -117,6 +117,19 @@ export class ProductsRepository {
         return result;
     }
 
+    async uploadImagesProducts(productId: string, imagesUrlsProducts: string[]) {
+        const updateProducts = await prisma.product.update({
+            where: { id: productId },
+            data: {
+                imagesUrls: {
+                    push: imagesUrlsProducts
+                }
+            }
+        });
+
+        return updateProducts;
+    }
+
     async findProductByTitleOwnerIdAndType(title: string, ownerId: string, type: any) {
         const product = await prisma.product.findFirst({
             where: {

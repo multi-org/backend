@@ -1,5 +1,6 @@
 import { logger, CustomError } from "@app/utils/logger";
 import { ProductCreateInput, validateWeeklyAvailability } from "@app/models/Product_models";
+import Queue from '@app/jobs/lib/queue'
 
 import productRepository from "@app/repositories/products_repository";
 import enterpriService from './enterprise_services';
@@ -50,6 +51,13 @@ class ProductsServices {
         if (!created) {
             logger.error("Product creation failed - repository returned null");
             throw new CustomError("Product creation failed", 500);
+        }
+
+        if (productData.imagesUrls && productData.imagesUrls.length > 0) {
+            Queue.add('uploadProductImages', {
+                images: productData.imagesUrls,
+                productId: created.product.id
+            }, { priority: 1 });
         }
 
         logger.info("Product created successfully", { 

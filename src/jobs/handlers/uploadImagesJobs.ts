@@ -59,3 +59,29 @@ export const uploadDocumentPdfJob = {
     }
   }
 };
+
+export const uploadProductImagesJob = {
+  key: 'uploadProductImages',
+  async handle({ data }: { data: { productId: string; imagePaths: string[] } }) {
+    const { productId, imagePaths } = data;
+
+    try {
+      logger.info(`Job: Starting uploadProductImages for product`, { productId });
+
+      const result = await uploadService.uploadProductImage(imagePaths, productId);
+
+      logger.info(`Job: uploadProductImages completed successfully for product`, { productId });
+
+      return {
+        success: true,
+        result: result.secure_url,
+        procloudinaryId: result.public_id,
+        productId: productId,
+      };
+      
+    } catch (error) {
+      logger.error('Job: Error in uploadProductImages', { error });
+      throw new CustomError('Erro ao fazer upload das imagens do produto', 500);
+    }
+  },
+}
