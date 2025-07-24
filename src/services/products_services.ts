@@ -281,12 +281,12 @@ class ProductsServices {
         else if (product.ownerType === "SUBSIDIARY") {
             // company = await enterpriService.findSubsidiaryById(product.ownerId);
         }
-
         const productWtihUserData = await userRepository.findUserById(product.createdBy);
+
         logger.info("Products fetched successfully");
         return {
             ...product,
-            ownerId: company ? {
+            owner: company ? {
                 name: company.legalName,
                 ownerId: company.id,
                 cnpj: company.cnpj,
