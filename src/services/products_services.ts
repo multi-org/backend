@@ -5,17 +5,12 @@ import Queue from '@app/jobs/lib/queue'
 import productRepository from "@app/repositories/products_repository";
 import enterpriService from './enterprise_services';
 import userRepository from "@app/repositories/user_repository";
-import { Product } from "@prisma/client";
+import { OwnerType, Product } from "@prisma/client";
 
 class ProductsServices {
 
-    async createProduct(productData: ProductCreateInput, ownerId: string, userId: string) {
-        logger.info("Starting product creation process", { 
-            productTitle: productData.title, 
-            productType: productData.type,
-            ownerId,
-            userId 
-        });
+    async createProduct(productData: ProductCreateInput, ownerId: string, userId: string, imagesFiles?: Express.Multer.File[]) {
+        logger.info("Starting product creation process");
 
         if (productData.weeklyAvailability && !validateWeeklyAvailability(productData.weeklyAvailability)) {
             logger.error("Invalid weekly availability provided");
@@ -45,7 +40,8 @@ class ProductsServices {
             throw new CustomError("Product with this title already exists for this enterprise", 400);
         }
 
-        await this.validateSpecificProductData(productData)
+        await this.validateSpecificProductData(productData);
+        await this.validateProductWithPrice(productData);
 
         const created = await productRepository.createProduct(productData, userId, ownerId);
         if (!created) {
@@ -53,9 +49,10 @@ class ProductsServices {
             throw new CustomError("Product creation failed", 500);
         }
 
-        if (productData.imagesUrls && productData.imagesUrls.length > 0) {
+        if (imagesFiles && imagesFiles.length > 0) {
+            const localFilePaths = imagesFiles.map(file => file.path);
             Queue.add('uploadProductImages', {
-                images: productData.imagesUrls,
+                images: localFilePaths,
                 productId: created.product.id
             }, { priority: 1 });
         }
@@ -75,7 +72,7 @@ class ProductsServices {
 
         const result = await productRepository.findProductsByOwnerId(ownerId, page, limit);
 
-        const productsWithUserData = await this.productWithUserData(result.products[0]);
+        const productsWithUserData = await this.productWithUserDataAndCompany(result.products[0]);
 
         logger.info("Products fetched successfully");
         return {
@@ -99,12 +96,12 @@ class ProductsServices {
             throw new CustomError("Produto foi excluído", 410);
         }
 
-        const productWithUserData = await this.productWithUserData(product);
+        const productWithUserData = await this.productWithUserDataAndCompany(product);
 
         return productWithUserData;
     }
 
-    async updateProduct(productId: string, updateData: Partial<ProductCreateInput>, userId: string) {
+    async updateProduct(productId: string, updateData: Partial<ProductCreateInput>, imagesFiles?: Express.Multer.File[]) {
         logger.info("Starting product update process");
 
         const existingProduct = await this.getProductById(productId);
@@ -127,6 +124,14 @@ class ProductsServices {
         if (!update) {
             logger.error("Product update failed - repository returned null", { productId });
             throw new CustomError("Product update failed", 500);
+        }
+        
+        if (imagesFiles && imagesFiles.length > 0) {
+            const localFilePaths = imagesFiles.map(file => file.path);
+            Queue.add('uploadProductImages', {
+                images: localFilePaths, 
+                productId: productId 
+            }, { priority: 1 });
         }
 
         logger.info("Product updated successfully", { productId, updateData });
@@ -242,12 +247,57 @@ class ProductsServices {
         }
     }
 
-    private async productWithUserData(product: Product) {
-        const productWtihUserData = await userRepository.findUserById(product.createdBy);
+    private async validateProductWithPrice(productData: ProductCreateInput) {
+        switch (productData.chargingModel) {
+            case 'POR_DIA':
+                if (!productData.dailyPrice || productData.dailyPrice === 0) {
+                    logger.error("Daily price is required and must be greater than zero")
+                    throw new CustomError("Preço da diária é obrigatório e deve ser maior que zero", 400)
+                }
+                break;
+            case 'POR_HORA':
+                if (!productData.hourlyPrice || productData.hourlyPrice === 0) {
+                    logger.info("Hourly price is required and must be greater than zero")
+                    throw new CustomError("Preço da hora é obrigatório e deve ser maior que zero", 400);
+                }
+                break;
+            case 'AMBOS':
+                if ((!productData.dailyPrice || productData.dailyPrice === 0) || (!productData.hourlyPrice || productData.hourlyPrice === 0)) {
+                    logger.error("Both daily and hourly prices are required when charging model is AMBOS");
+                    throw new CustomError("Preço diário e por hora são obrigatórios quando o modelo de cobrança é AMBOS", 400);
+                }
+                break;
+            default:
+                logger.error("Invalid charging model provided", { chargingModel: productData.chargingModel });
+                throw new CustomError("Invalid charging model provided", 400);
+        }
+    }
 
+    private async productWithUserDataAndCompany(product: Product) {
+        let company;
+        if (product.ownerType === "ENTERPRISE") {
+            company = await enterpriService.findEnterpriseById(product.ownerId);
+        }
+        else if (product.ownerType === "SUBSIDIARY") {
+            // company = await enterpriService.findSubsidiaryById(product.ownerId);
+        }
+
+        const productWtihUserData = await userRepository.findUserById(product.createdBy);
         logger.info("Products fetched successfully");
         return {
             ...product,
+            ownerId: company ? {
+                name: company.legalName,
+                ownerId: company.id,
+                cnpj: company.cnpj,
+                description: company.description
+            } : {
+                name: "⚠️ EMPRESA REMOVIDA/INEXISTENTE",
+                onwerId: product.ownerId,
+                cnpj: "❌ Possível atividade de BOT detectada",
+                status: "SUSPICIOUS_REQUEST",
+                alert: "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema"
+            },
             createdBy: productWtihUserData ? {
                 name: productWtihUserData.name,
                 userId: productWtihUserData.userId,

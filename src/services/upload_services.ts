@@ -7,26 +7,36 @@ import { UploadApiResponse } from 'cloudinary';
 import fs from "fs";
 import { logger, CustomError } from "@app/utils/logger";
 import path from "path";
+import util from 'util';
 
+const unlinkAsync = util.promisify(fs.unlink);
 
 class uploadService {
   
-  private async cleanupTempDirectory(filePath: string): Promise<void> {
+  private async cleanupTempFile(filePath: string): Promise<void> {
     try {
       if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+        await unlinkAsync(filePath);
         logger.info(`Temporary file removed: ${filePath}`);
-      }
-
-      const tempDir = path.dirname(filePath);
-      if (tempDir.includes('temp_uploads') && fs.existsSync(tempDir)) {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-        logger.info(`Temporary directory removed: ${tempDir}`);
       }
 
     } catch (error) {
       logger.error(`Error removing temporary file: ${filePath}`, { error });
     }
+  }
+
+  private async cleanupTempDirectory(filePath: string): Promise<void> {
+    try {
+      const temDir = path.dirname(filePath);
+
+      if (temDir.includes("temp_uploads") && fs.existsSync(temDir)) {
+        fs.rmSync(temDir, { recursive: true, force: true });
+        logger.info('Temporary directory removed:', temDir)
+      }
+    } catch (error) { 
+      logger.error(`Error removing temporary directory: ${filePath}`, { error });
+    }
+    
   }
 
   static async cleanupAllTempDirectories() {
@@ -92,45 +102,47 @@ class uploadService {
     }
   }
 
-  async uploadProductImage(localFilePath: string[], productId: string): Promise<any>{
+  async uploadProductImage(localFilePath: string[], productId: string): Promise<any[]>{
+    const uploadedImageUrls: string[] = [];
 
     try {
       for (const filePath of localFilePath) {
         if (!fs.existsSync(filePath)) {
-          logger.error(`File not found: ${filePath}`);
-          throw new CustomError('Arquivo não encontrado para upload', 404);
+          logger.warn(`File not found for product image upload: ${filePath}. Skipping.`);
+          continue; // Skip this file if it doesn't exist
+        }
+
+        try {
+          logger.info(`Uploading product image: ${filePath} for product ${productId}`);
+          const result = await cloudinary.uploader.upload(filePath, {
+            folder: `products/${productId}`,
+            public_id: `product_${productId}_${Date.now()}_${path.basename(filePath, path.extname(filePath))}`,
+            resource_type: "image",
+            transformation: [
+              { width: 800, height: 600, crop: "limit" },
+              { quality: "auto" },
+              { format: "webp" } // otimizar o formato
+            ],
+          });
+          uploadedImageUrls.push(result.secure_url);
+          logger.info(`Image uploaded: ${result.secure_url}`);
+        } catch (uploadError: any) {
+          logger.error(`Failed to upload image ${filePath} to Cloudinary: ${uploadError.message}`);
+        } finally {
+          await this.cleanupTempFile(filePath); // Limpar arquivo temporário individualmente
         }
       }
 
-      logger.info(`Starting upload for product image: ${productId}`);
-
-      const uploadPromises = localFilePath.map(filePath => {
-        return cloudinary.uploader.upload(filePath, {
-          folder: `products/${productId}`,
-          public_id: `product_${productId}_${Date.now()}`,
-          resource_type: "image",
-          transformation: [
-            { width: 800, height: 600, crop: "limit" },
-            { quality: "auto" },
-            { format: "webp"} // otimizar o formato
-          ],
-        });
-      });
-
-      const results = await Promise.all(uploadPromises);
-      const imagesUrls = results.map((result: UploadApiResponse) => result.secure_url);
-
-      logger.info(`Product image uploaded to Cloudinary successfully: ${imagesUrls.join(', ')}`);
-
-      const updateImagesProduct = await productsRepository.uploadImagesProducts(productId, imagesUrls);
-      if (!updateImagesProduct) {
-        logger.error(`Failed to update product images in database for product: ${productId}`);
-        throw new CustomError("Failed to update product images in database", 500);
+      if (localFilePath.length > 0) {
+        await this.cleanupTempDirectory(localFilePath[0]);
       }
 
+      logger.info(`Finished processing product images for product ${productId}. Uploaded ${uploadedImageUrls.length} images.`);
+      return uploadedImageUrls;
+
     } catch (error) {
-      logger.error('Error uploading product image in service', { error });
-      throw new CustomError('Erro ao fazer upload da imagem do produto no serviço', 500);
+      logger.error('Error in uploadProductImages service', { error });
+      throw new CustomError('Erro ao fazer upload das imagens do produto no serviço', 500);
     }
   }
 

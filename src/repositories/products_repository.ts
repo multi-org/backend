@@ -38,7 +38,7 @@ export class ProductsRepository {
     }
 
     async createProduct(productData: ProductCreateInput, userId: string, ownerId: string) { 
-        const { title, description, type, basePrice, category, imagesUrls, ownerType, unity, billingModel, weeklyAvailability } = productData;
+        const { title, description, type, category, ownerType, unity, chargingModel, weeklyAvailability, dailyPrice, hourlyPrice } = productData;
 
         const result = await prisma.$transaction(async (tx) => {
             
@@ -47,13 +47,13 @@ export class ProductsRepository {
                     title,
                     description,
                     type,
-                    basePrice,
                     category,
-                    imagesUrls: imagesUrls || [],
                     ownerId,
                     ownerType,
                     unity,
-                    billingModel,
+                    chargingModel,
+                    hourlyPrice,
+                    dailyPrice,
                     createdBy: userId,
                 },
             });
@@ -198,7 +198,7 @@ export class ProductsRepository {
     }
 
     async updateProduct(productId: string, updateData: Partial<ProductCreateInput>) {
-        const { title, description, type, basePrice, category, imagesUrls, ownerType, unity, billingModel, weeklyAvailability, ...specificData } = updateData;
+        const { title, description, type, category, ownerType, unity, chargingModel, weeklyAvailability, ...specificData } = updateData;
 
         const result = await prisma.$transaction(async (tx) => {
            
@@ -207,11 +207,9 @@ export class ProductsRepository {
                 data: {
                     ...(title && { title }),
                     ...(description && { description }),
-                    ...(basePrice && { basePrice }),
                     ...(category && { category }),
-                    ...(imagesUrls && { imagesUrls }),
                     ...(unity && { unity }),
-                    ...(billingModel && { billingModel }),
+                    ...(chargingModel && { chargingModel }),
                 },
             });
             

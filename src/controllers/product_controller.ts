@@ -11,37 +11,28 @@ class ProdutoController {
 
   static async createProduct(req: AuthRequest, res: Response) {
     try {
-      const response = validateProductCreation(req.body);
-      if (!response.success) {
-        return res.status(400).json({
-          satisfies: false,
-          message: "Validation failed",
-          errors: response.error.flatten().fieldErrors || {},
-        });
+      const validationResult = validateProductCreation(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ errors: validationResult.error.errors });
       }
 
+      const productData: ProductCreateInput = validationResult.data;
       const userId = req.userId!;
       const ownerId = req.params.companyId;
 
-      if (!ownerId) {
-        return res.status(400).json({
-          success: false,
-          message: "ID do proprietário é obrigatório",
-        });
-      }
+      const imagesFiles = req.files as Express.Multer.File[];
 
-      const productData: ProductCreateInput = response.data;
-
-      const createProduct = await productServices.createProduct(
+      const newProduct = await productServices.createProduct(
         productData,
         ownerId,
-        userId
+        userId, 
+        imagesFiles
       );
 
       return res.status(200).json({
         success: true,
         message: "Produto criado com sucesso",
-        data: createProduct,
+        data: newProduct,
       });
     } catch (error: any) {
       const statusCode = error.status || 500;
