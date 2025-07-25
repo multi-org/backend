@@ -190,6 +190,7 @@ model Company {
   updatedAt             DateTime @default(now()) @updatedAt
   associateDiscountRate Decimal  @default(0.0) @db.Decimal(5, 4) 
   createdBy             String   @db.Uuid
+  ownerType             OwnerType @default(ENTERPRISE)
 
   legalRepresentatives    LegalRepresentative[]
   CompanyAssociates       CompanyAssociate[]
@@ -215,6 +216,7 @@ model Subsidiary {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   createdBy    String   @db.Uuid
+  ownerType    OwnerType @default(SUBSIDIARY)
 
   Address Address?
    
@@ -303,7 +305,6 @@ model Product {
   title         String      @db.VarChar(255) 
   description   String      @db.VarChar(300)
   ownerId       String      @db.Uuid 
-  ownerType     OwnerType
   type          ProductType
 
   dailyPrice    Decimal?    @db.Decimal(10, 2)  // Preço por dia

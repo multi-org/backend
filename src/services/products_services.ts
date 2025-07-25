@@ -1,11 +1,10 @@
 import { logger, CustomError } from "@app/utils/logger";
-import { ProductCreateInput, validateWeeklyAvailability } from "@app/models/Product_models";
+import { ProductCreateInput, validateWeeklyAvailability,  ProductWithRelations} from "@app/models/Product_models";
 import Queue from '@app/jobs/lib/queue'
 
 import productRepository from "@app/repositories/products_repository";
 import enterpriService from './enterprise_services';
 import userRepository from "@app/repositories/user_repository";
-import { OwnerType, Product } from "@prisma/client";
 
 class ProductsServices {
 
@@ -16,30 +15,14 @@ class ProductsServices {
             logger.error("Invalid weekly availability provided");
             throw new CustomError("Horários de disponibilidade inválidos. Horário de início deve ser menor que o de fim.", 400);
         }
-
-        let owner: any;
-        switch (productData.ownerType) {
-            case "ENTERPRISE":
-                owner = await enterpriService.findEnterpriseById(ownerId);
-                if (!owner) {
-                    logger.error("Enterprise not found", { ownerId });
-                    throw new CustomError("Enterprise not found", 404);
-                }
-                break;
-            case "SUBSIDIARY":
-                logger.error("Subsidiary logic not implemented yet");
-                throw new CustomError("Lógica para subsidiária ainda não implementada", 501);
-            default:
-                logger.error("Invalid owner type provided");
-                throw new CustomError("Invalid owner type provided", 400);
-        }
-
-        const existing = await productRepository.findProductByTitleOwnerIdAndType(productData.title, owner.id, productData.type);
+        
+        const existing = await productRepository.findProductByTitleOwnerIdAndType(productData.title, ownerId, productData.type);
         if (existing) {
             logger.error("Product with this title already exists for this enterprise");
             throw new CustomError("Product with this title already exists for this enterprise", 400);
         }
 
+        console.log("me parece parar aqui", productData)
         await this.validateSpecificProductData(productData);
         await this.validateProductWithPrice(productData);
 
@@ -216,6 +199,7 @@ class ProductsServices {
     }
 
     private async validateSpecificProductData(productData: ProductCreateInput) {
+        console.log("chegamos", productData)
         switch (productData.type) {
             case "SPACE":
                 if (!productData.spaceDetails) {
@@ -273,27 +257,26 @@ class ProductsServices {
         }
     }
 
-    private async productWithUserDataAndCompany(product: Product) {
-        let company;
-        if (product.ownerType === "ENTERPRISE") {
-            company = await enterpriService.findEnterpriseById(product.ownerId);
-        }
-        else if (product.ownerType === "SUBSIDIARY") {
-            // company = await enterpriService.findSubsidiaryById(product.ownerId);
-        }
+    private async productWithUserDataAndCompany(product: ProductWithRelations) {
         const productWtihUserData = await userRepository.findUserById(product.createdBy);
-
+        const company = await enterpriService.findEnterpriseById(product.ownerId);
+        const weeklyAvailabilityMapped = product.ProductWeeklyAvailability 
+        ? await this.mapProductWeeklyAvailability(product.ProductWeeklyAvailability)
+             : {};
+        
         logger.info("Products fetched successfully");
         return {
             ...product,
+            ProductWeeklyAvailability: weeklyAvailabilityMapped,
             owner: company ? {
                 name: company.legalName,
                 ownerId: company.id,
+                ownerType: company.ownerType,
                 cnpj: company.cnpj,
                 description: company.description
             } : {
                 name: "⚠️ EMPRESA REMOVIDA/INEXISTENTE",
-                onwerId: product.ownerId,
+                ownerId: product.ownerId,
                 cnpj: "❌ Possível atividade de BOT detectada",
                 status: "SUSPICIOUS_REQUEST",
                 alert: "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema"
@@ -310,6 +293,32 @@ class ProductsServices {
                 alert: "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema"
             }
         };
+    }
+
+    private async mapProductWeeklyAvailability(productWeeklyAvailability: any[]) {
+    const dayMap: Record<number, string> = {
+        0: "sunday",
+        1: "monday",
+        2: "tuesday", 
+        3: "wednesday",
+        4: "thursday",
+        5: "friday",
+        6: "saturday"
+    };
+
+    return productWeeklyAvailability.reduce((acc, availability) => {
+        const dayOfWeek = availability.dayOfWeek;
+        const dayName = dayMap[dayOfWeek];
+        
+        if (dayName && availability.isAvailable) {
+            acc[dayName] = {
+                start: availability.startTime,
+                end: availability.endTime,
+            };
+        }
+        return acc;
+    }, {});
+        
     }
 }
 

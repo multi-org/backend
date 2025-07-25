@@ -20,7 +20,7 @@ export class ProductsRepository {
         };
 
         for (const [day, config] of Object.entries(weeklyAvailability)) {
-            if (config && config.available) {
+            if (config) {
                 const dayIndex = dayMap[day as keyof typeof dayMap];
                 if (dayIndex !== undefined) {
                     availabilityRecords.push({
@@ -28,7 +28,6 @@ export class ProductsRepository {
                         dayOfWeek: dayIndex,
                         startTime: config.start,
                         endTime: config.end,
-                        isAvailable: config.available
                     });
                 }
             }
@@ -38,7 +37,7 @@ export class ProductsRepository {
     }
 
     async createProduct(productData: ProductCreateInput, userId: string, ownerId: string) { 
-        const { title, description, type, category, ownerType, unity, chargingModel, weeklyAvailability, dailyPrice, hourlyPrice } = productData;
+        const { title, description, type, category, unity, chargingModel, weeklyAvailability, dailyPrice, hourlyPrice } = productData;
 
         const result = await prisma.$transaction(async (tx) => {
             
@@ -49,7 +48,6 @@ export class ProductsRepository {
                     type,
                     category,
                     ownerId,
-                    ownerType,
                     unity,
                     chargingModel,
                     hourlyPrice,
@@ -198,7 +196,7 @@ export class ProductsRepository {
     }
 
     async updateProduct(productId: string, updateData: Partial<ProductCreateInput>) {
-        const { title, description, type, category, ownerType, unity, chargingModel, weeklyAvailability, ...specificData } = updateData;
+        const { title, description, type, category, unity, chargingModel, weeklyAvailability, ...specificData } = updateData;
 
         const result = await prisma.$transaction(async (tx) => {
            
