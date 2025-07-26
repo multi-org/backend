@@ -20,7 +20,7 @@ export class ProductsRepository {
         };
 
         for (const [day, config] of Object.entries(weeklyAvailability)) {
-            if (config && config.available) {
+            if (config) {
                 const dayIndex = dayMap[day as keyof typeof dayMap];
                 if (dayIndex !== undefined) {
                     availabilityRecords.push({
@@ -28,7 +28,6 @@ export class ProductsRepository {
                         dayOfWeek: dayIndex,
                         startTime: config.start,
                         endTime: config.end,
-                        isAvailable: config.available
                     });
                 }
             }
@@ -37,9 +36,8 @@ export class ProductsRepository {
         return availabilityRecords;
     }
 
-
     async createProduct(productData: ProductCreateInput, userId: string, ownerId: string) { 
-        const { title, description, type, basePrice, category, imagesUrls, ownerType, unity, billingModel, weeklyAvailability } = productData;
+        const { title, description, type, category, unity, chargingModel, weeklyAvailability, dailyPrice, hourlyPrice } = productData;
 
         const result = await prisma.$transaction(async (tx) => {
             
@@ -48,13 +46,12 @@ export class ProductsRepository {
                     title,
                     description,
                     type,
-                    basePrice,
                     category,
-                    imagesUrls: imagesUrls || [],
                     ownerId,
-                    ownerType,
                     unity,
-                    billingModel,
+                    chargingModel,
+                    hourlyPrice,
+                    dailyPrice,
                     createdBy: userId,
                 },
             });
@@ -116,6 +113,19 @@ export class ProductsRepository {
         });
 
         return result;
+    }
+
+    async uploadImagesProducts(productId: string, imagesUrlsProducts: string[]) {
+        const updateProducts = await prisma.product.update({
+            where: { id: productId },
+            data: {
+                imagesUrls: {
+                    push: imagesUrlsProducts
+                }
+            }
+        });
+
+        return updateProducts;
     }
 
     async findProductByTitleOwnerIdAndType(title: string, ownerId: string, type: any) {
@@ -186,7 +196,7 @@ export class ProductsRepository {
     }
 
     async updateProduct(productId: string, updateData: Partial<ProductCreateInput>) {
-        const { title, description, type, basePrice, category, imagesUrls, ownerType, unity, billingModel, weeklyAvailability, ...specificData } = updateData;
+        const { title, description, type, category, unity, chargingModel, weeklyAvailability, ...specificData } = updateData;
 
         const result = await prisma.$transaction(async (tx) => {
            
@@ -195,11 +205,9 @@ export class ProductsRepository {
                 data: {
                     ...(title && { title }),
                     ...(description && { description }),
-                    ...(basePrice && { basePrice }),
                     ...(category && { category }),
-                    ...(imagesUrls && { imagesUrls }),
                     ...(unity && { unity }),
-                    ...(billingModel && { billingModel }),
+                    ...(chargingModel && { chargingModel }),
                 },
             });
             
@@ -270,7 +278,7 @@ export class ProductsRepository {
         };
     }
 
-    async createProductAvailability(productId: string, availabilityData: { startDate: Date, endDate: Date, isAvaliable: boolean, priceOverride?: number }) {
+    async createProductAvailability(productId: string, availabilityData: { startDate: Date, endDate: Date, isAvailable: boolean, priceOverride?: number }) {
         const availability = await prisma.productAvailability.create({
             data: {
                 productId,
@@ -279,6 +287,41 @@ export class ProductsRepository {
         });
 
         return availability;
+    }
+
+    async searchProductsMultipleFields(searchTerm: string) {
+        return await prisma.product.findMany({
+            where: {
+                OR: [
+                    {
+                        title: {
+                            contains: searchTerm,
+                            mode: 'insensitive'
+                        }
+                    },
+                    {
+                        description: {
+                            contains: searchTerm,
+                            mode: 'insensitive'
+                        }
+                    },
+                    {
+                        category: {
+                            contains: searchTerm,
+                            mode: 'insensitive'
+                        }
+                    }
+                ],
+                status: 'ACTIVE'
+            },
+            take: 10,
+            include: {
+                equipamentProduct: true,
+                spaceProduct: true,
+                servicesProduct: true,
+                productAvailability: true,
+            }
+        })
     }
 }
 

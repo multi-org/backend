@@ -292,7 +292,6 @@ export class UserServices {
         return associationsWithUserData;
     }
 
-
     async associationToCompanyConfirmation(userAssociation: string) {
         logger.info("Confirming association with company");
 

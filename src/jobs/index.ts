@@ -1,5 +1,5 @@
 import * as EmailJobs from './handlers/EmailJobs';
-export  {uploadUserProfileImageJob, uploadDocumentPdfJob} from './handlers/uploadImagesJobs';
+export  {uploadUserProfileImageJob, uploadDocumentPdfJob, uploadProductImagesJob} from './handlers/uploadImagesJobs';
 
 export const {
     verificationCodeEmail,

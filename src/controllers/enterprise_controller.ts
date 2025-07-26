@@ -5,6 +5,7 @@ import EnterpriseService from "@app/services/enterprise_services";
 import jwt from 'jsonwebtoken';
 
 class EnterpriseController { 
+
     async createCompany(req: AuthRequest, res: Response) {
         const result = createEnterpriseZode.safeParse(req.body);
         if (!result.success) {
@@ -108,6 +109,18 @@ class EnterpriseController {
         }
     }
 
+    async getAllCompanys(req: AuthRequest, res: Response) { 
+        try {
+            const companies = await EnterpriseService.getAllCompanys();
+            return res.status(200).json({success: true, message: "Companies retrieved successfully", companies});
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
     async getAllCompanyRequest(req: AuthRequest, res: Response) {
         try {
             const companies = await EnterpriseService.getAllCompanyRequest();
@@ -154,7 +167,6 @@ class EnterpriseController {
             });
         }
     }
-
 }
 
 export default new EnterpriseController();

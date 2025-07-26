@@ -1,3 +1,4 @@
+import { Decimal } from "@prisma/client/runtime/library";
 import { z } from "zod";
 
 // Schema para disponibilidade semanal
@@ -5,57 +6,49 @@ const weeklyAvailabilitySchema = z.object({
   monday: z.object({
     start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
     end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
-    available: z.boolean()
   }).optional(),
   tuesday: z.object({
     start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
     end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
-    available: z.boolean()
   }).optional(),
   wednesday: z.object({
     start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
     end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
-    available: z.boolean()
   }).optional(),
   thursday: z.object({
     start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
     end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
-    available: z.boolean()
   }).optional(),
   friday: z.object({
     start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
     end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
-    available: z.boolean()
   }).optional(),
   saturday: z.object({
     start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
     end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
-    available: z.boolean()
   }).optional(),
   sunday: z.object({
     start: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
     end: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Formato de hora inválido (HH:MM)"),
-    available: z.boolean()
   }).optional(),
 }).optional();
 
 // Schema base para produtos
-const productSchemaZod = z.object({
+const ProductBaseSchema = z.object({
   title: z.string().min(1, "Título é obrigatório").max(255, "Título deve ter no máximo 255 caracteres"),
   description: z.string().min(1, "Descrição é obrigatória").max(300, "Descrição deve ter no máximo 300 caracteres"),
   type: z.enum(["SPACE", "SERVICE", "EQUIPAMENT"], {
     errorMap: () => ({ message: "Tipo deve ser SPACE, SERVICE ou EQUIPAMENT" })
   }),
-  basePrice: z.number().min(0.01, "Preço base deve ser maior que zero"),
   category: z.string().min(1, "Categoria é obrigatória").max(500, "Categoria deve ter no máximo 500 caracteres"),
-  imagesUrls: z.array(z.string().url("URL de imagem inválida")).optional().default([]),
-  ownerType: z.enum(["ENTERPRISE", "SUBSIDIARY"], {
-    errorMap: () => ({ message: "Tipo de proprietário deve ser ENTERPRISE ou SUBSIDIARY" })
-  }),
+  chargingModel: z.enum(["POR_DIA", "POR_HORA", "AMBOS"]).default("AMBOS"),
   unity: z.string().max(50, "Unidade deve ter no máximo 50 caracteres").optional(),
-  billingModel: z.enum(["POR_DIA", "POR_HORA", "POR_MES", "FIXO", "AMBOS"], {
-    errorMap: () => ({ message: "Modelo de cobrança inválido" })
-  }).default("POR_DIA"),
+
+  dailyPrice: z.number().min(0, "Preço da diária deve ser positivo").optional(),
+  hourlyPrice: z.number().min(0, "Preço da hora deve ser positivo").optional(),
+
+  imagesUrls: z.array(z.string().url("URL de imagem inválida")).max(5, "Máximo de 5 URLs de imagens permitidas").optional(),
+
   weeklyAvailability: weeklyAvailabilitySchema,
 });
 
@@ -80,7 +73,7 @@ const equipmentProductSchema = z.object({
 // tipos
 export type WeeklyAvailability = z.infer<typeof weeklyAvailabilitySchema>;
 
-export type ProductCreateInput = z.infer<typeof productSchemaZod> & (
+export type ProductCreateInput = z.infer<typeof ProductBaseSchema> & (
   { type: "SPACE"; spaceDetails: z.infer<typeof spaceProductSchema> } |
   { type: "SERVICE"; serviceDetails: z.infer<typeof serviceProductSchema> } |
   { type: "EQUIPAMENT"; equipmentDetails: z.infer<typeof equipmentProductSchema> }
@@ -92,7 +85,7 @@ export function validateProductCreation(data: any):
   { success: false; error: z.ZodError } {
   
   // Validar dados base
-  const baseResult = productSchemaZod.safeParse(data);
+  const baseResult = ProductBaseSchema.safeParse(data);
   if (!baseResult.success) {
     return baseResult;
   }
@@ -179,7 +172,7 @@ export function validateWeeklyAvailability(availability: WeeklyAvailability): bo
   if (!availability) return true;
 
   for (const [day, config] of Object.entries(availability)) {
-    if (config && config.available) {
+    if (config) {
       const startTime = config.start.split(':').map(Number);
       const endTime = config.end.split(':').map(Number);
       
@@ -193,4 +186,50 @@ export function validateWeeklyAvailability(availability: WeeklyAvailability): bo
   }
   
   return true;
+}
+
+export interface ProductWithRelations {
+    id: string;
+    title: string;
+    description: string;
+    type: string;
+    status: string;
+    category: string;
+    chargingModel: string;
+    unity: string | null;
+    dailyPrice: Decimal | null;
+    hourlyPrice: Decimal | null;
+    ownerId: string;
+    createdBy: string;
+    createdAt: Date;
+  updatedAt: Date;
+  ProductWeeklyAvailability?: {
+    dayOfWeek: number;
+    isAvailable: boolean;
+    startTime: string;
+    endTime: string;
+    productId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+  servicesProduct?: {
+    id: string;
+    durationMinutes: number | null;
+    requirements: string | null;
+    productId: string;
+  } | null;
+  spaceProduct?: {
+    id: string;
+    capacity: number;
+    area: number;
+    productId: string;
+  } | null;
+  equipmentProduct?: {
+    id: string;
+    brand: string | null;
+    model: string | null;
+    specifications: string | null;
+    stock: number;
+    productId: string;
+  } | null;
 }

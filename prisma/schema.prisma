@@ -66,11 +66,9 @@ enum OwnerType {
   @@schema("multi")
 }
 
-enum BillingModel{
+enum chargingModel {
   POR_DIA @map("por dia")
   POR_HORA @map("por hora")
-  POR_MES @map("por mês")
-  FIXO @map("fixo")
   AMBOS @map("ambos") // Para equipamentos que podem ser por hora ou dia
 
   @@schema("multi")
@@ -192,6 +190,7 @@ model Company {
   updatedAt             DateTime @default(now()) @updatedAt
   associateDiscountRate Decimal  @default(0.0) @db.Decimal(5, 4) 
   createdBy             String   @db.Uuid
+  ownerType             OwnerType @default(ENTERPRISE)
 
   legalRepresentatives    LegalRepresentative[]
   CompanyAssociates       CompanyAssociate[]
@@ -217,6 +216,7 @@ model Subsidiary {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   createdBy    String   @db.Uuid
+  ownerType    OwnerType @default(SUBSIDIARY)
 
   Address Address?
    
@@ -305,14 +305,17 @@ model Product {
   title         String      @db.VarChar(255) 
   description   String      @db.VarChar(300)
   ownerId       String      @db.Uuid 
-  ownerType     OwnerType
   type          ProductType
-  basePrice     Decimal     @db.Decimal(10, 2) 
+
+  dailyPrice    Decimal?    @db.Decimal(10, 2)  // Preço por dia
+  hourlyPrice   Decimal?    @db.Decimal(10, 2)  // Preço por hora
+
+  chargingModel  chargingModel @default(POR_DIA)
   unity         String?     @db.VarChar(50) // UNIDADE
-  billingModel  BillingModel @default(POR_DIA)
   category      String      @db.VarChar(500)
   imagesUrls    String[]    @default([]) @db.VarChar(1000)
   status        Status      @default(ACTIVE) 
+
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   createdBy     String      @db.Uuid

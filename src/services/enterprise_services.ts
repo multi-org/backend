@@ -48,6 +48,18 @@ class EnterpriseServices {
         return { message: "Successfully created company", enterpriseName: newEnterprise.popularName };
     }
 
+    async getAllCompanys() {
+        logger.info("Retrieving all companies");
+
+        const companies = await enterpriseRepository.findAllEnterprises();
+        if (!companies || companies.length === 0) {
+            logger.warn("No companies found");
+            throw new CustomError("No companies found", 404);
+        }
+
+        return companies;
+    }
+
     async findEnterpriseById(id: string) {
         logger.info(`Searching for enterprise`);
 
@@ -260,17 +272,17 @@ class EnterpriseServices {
 
     }
 
-    async searchEnterpriseMultipleFields(legalName: string) { 
+    async searchEnterpriseMultipleFields(search: string) { 
         logger.info(`Searching for enterprise`);
 
-        if (!legalName || legalName.trim() === '') {
-            logger.warn('No legal name provided for enterprise search');
-            throw new CustomError("Legal name is required", 400);
+        if (!search || search.trim() === '') {
+            logger.warn('No search term provided for enterprise search');
+            throw new CustomError("Search term is required", 400);
         }
 
-        const enterprise = await enterpriseRepository.searchEnterpriseMultipleFields(legalName);
+        const enterprise = await enterpriseRepository.searchEnterpriseMultipleFields(search);
         if (!enterprise) {
-            logger.warn(`Enterprise with legal name ${legalName} not found`);
+            logger.warn(`Enterprise with legal name ${search} not found`);
             throw new CustomError("Enterprise not found", 404);
         }
 

@@ -70,6 +70,25 @@ export class EnterpriseRepository {
         });
     }
 
+    async findAllEnterprises() {
+        return await prisma.company.findMany({
+            where: {
+                status: 'ACTIVE'
+            },
+            include: {
+                Address: true,
+                legalRepresentatives: {
+                    include: {
+                        user: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+    }
+
     async findEnterpriseByPhone(phone: string) {
         return await prisma.company.findFirst({
             where: {

@@ -4,6 +4,7 @@ import uploadService from "@app/services/upload_services";
 import Queue from "@app/jobs/lib/queue";
 
 class UploadController {
+
   async uploadUserProfileImage(req: AuthRequest, res: Response) {
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
