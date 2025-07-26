@@ -109,6 +109,18 @@ class EnterpriseController {
         }
     }
 
+    async getAllCompanys(req: AuthRequest, res: Response) { 
+        try {
+            const companies = await EnterpriseService.getAllCompanys();
+            return res.status(200).json({success: true, message: "Companies retrieved successfully", companies});
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
     async getAllCompanyRequest(req: AuthRequest, res: Response) {
         try {
             const companies = await EnterpriseService.getAllCompanyRequest();

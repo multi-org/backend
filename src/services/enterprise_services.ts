@@ -48,6 +48,18 @@ class EnterpriseServices {
         return { message: "Successfully created company", enterpriseName: newEnterprise.popularName };
     }
 
+    async getAllCompanys() {
+        logger.info("Retrieving all companies");
+
+        const companies = await enterpriseRepository.findAllEnterprises();
+        if (!companies || companies.length === 0) {
+            logger.warn("No companies found");
+            throw new CustomError("No companies found", 404);
+        }
+
+        return companies;
+    }
+
     async findEnterpriseById(id: string) {
         logger.info(`Searching for enterprise`);
 
