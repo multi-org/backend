@@ -21,9 +21,7 @@ export const createUserZode = z.object({
   }).nonempty("Preferences cannot be empty"),
 });
 
-export const userCpfZode = z.object({
-  cpf: z.string().length(14, "CPF must be exactly 14 characters long")
-});
+export const userCpfZode = z.string().length(14, "CPF must be exactly 14 characters long");
 
 export interface createUserDTOS {
   name: string;
