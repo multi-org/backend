@@ -211,7 +211,7 @@ class userController {
         const localFilePath = req.file.path;
 
         try {
-            const ValidCpf = await userCpfZode.safeParse(userCpf);
+            const ValidCpf = userCpfZode.safeParse(userCpf);
             if (!ValidCpf.success) {
                 return res.status(400).json({
                     message: "Invalid CPF",
