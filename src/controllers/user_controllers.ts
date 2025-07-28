@@ -258,6 +258,40 @@ class userController {
         }
     }
 
+    async associationToCompanyReject(req: AuthRequest, res: Response) { 
+        const { userId, companyId } = req.params;
+        if (!userId || !companyId) {
+            return res.status(400).json({ message: "User ID and Company ID are required" });
+        }
+
+        try {
+            const rejection = await UserService.associationToCompanyReject(userId, companyId);
+            return res.status(200).json({success: true, message: rejection});
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async deleteAllAssociationRequests(req: AuthRequest, res: Response) { 
+        const userId = req.userId!;
+        if (!userId) {
+            return res.status(400).json({ message: "User ID not found in cookies" });
+        }
+
+        try {
+            const result = await UserService.deleteAllAssociationRequests();
+            return res.status(200).json({success: true, message: result});
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
 
 }
 

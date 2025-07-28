@@ -146,7 +146,7 @@ class uploadService {
     }
   }
 
-  async uploadDocumentPdf(localFilePath: string, userId: string, userCpf: string, companyId: string): Promise<any> {
+  async uploadDocumentPdfAssociation(localFilePath: string, userId: string, userCpf: string, companyId: string): Promise<any> {
     
     if (!fs.existsSync(localFilePath)) {
       logger.error(`File not found: ${localFilePath}`);
@@ -168,8 +168,9 @@ class uploadService {
         userId,
         companyId,
         userCpf,
-        documentUrl: result.secure_url, // Corrigido: nome de propriedade válido
-        uploadedAt: new Date().toISOString(),
+        documentUrl: result.secure_url,
+      uploadedAt: new Date().toISOString(),
+        requiredAt: new Date().toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'}),
         cloudinaryId: result.public_id
       };
 
@@ -186,6 +187,24 @@ class uploadService {
       result: result.secure_url,
       cloudinaryId: result.public_id,
       userId: userId
+    }
+  }
+
+  async deleteFileCloudinary(cloudinaryId: string): Promise<void> { 
+    try {
+      const result: UploadApiResponse = await cloudinary.uploader.destroy(cloudinaryId, {
+        resource_type: "raw" 
+      });
+
+      if (result.result !== 'ok') {
+        logger.error(`Failed to delete file with Cloudinary ID ${cloudinaryId}: ${result.result}`);
+        throw new CustomError("Failed to delete file from Cloudinary", 500);
+      }
+
+      logger.info(`File with Cloudinary ID ${cloudinaryId} deleted successfully`);
+    } catch (error) {
+      logger.error(`Error deleting file with Cloudinary ID ${cloudinaryId}`, { error });
+      throw new CustomError("Erro ao deletar arquivo do Cloudinary", 500);
     }
   }
 }

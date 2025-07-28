@@ -16,12 +16,16 @@ export const createUserZode = z.object({
     const parsedDate = new Date(date);
     return !isNaN(parsedDate.getTime());
   }, "Invalid date format"),
-  preferences: z.array(z.union([z.literal(1), z.literal(2), z.literal(3)]), {
-    required_error: "Preferences are required",
-  }).nonempty("Preferences cannot be empty"),
+  preferences: z
+    .array(z.union([z.literal(1), z.literal(2), z.literal(3)]), {
+      required_error: "Preferences are required",
+    })
+    .nonempty("Preferences cannot be empty"),
 });
 
-export const userCpfZode = z.string().length(14, "CPF must be exactly 14 characters long");
+export const userCpfZode = z
+  .string()
+  .length(14, "CPF must be exactly 14 characters long");
 
 export interface createUserDTOS {
   name: string;
@@ -56,6 +60,17 @@ export const UserAdressZode = z.object({
   country: z.string().min(1, "Country is required"),
 });
 
+export interface requestUserAssociation {
+  userId: string;
+  companyId: string;
+  userCpf: string;
+  documentUrl: string;
+  uploadedAt: string;
+  requiredAt: string;
+  cloudinaryId: string;
+}
+
 export type createUserZodeType = z.infer<typeof createUserZode>;
 export type emailZode = z.infer<typeof emailZode>;
 export type UserAdressZode = z.infer<typeof UserAdressZode>;
+export type RequestUserAssociations = requestUserAssociation[];

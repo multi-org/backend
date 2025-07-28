@@ -134,6 +134,11 @@ export async function permissions() {
       resource: 'company_associate',
       description: 'Allows deleting a company associate',
     },
+    {
+      action: 'reject',
+      resource: 'company_associate',
+      description: 'Allows rejecting a company associate request',
+    },
 
     // Alugar espaços e produtos
     {

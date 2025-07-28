@@ -1,8 +1,3 @@
-import * as EmailJobs from './handlers/EmailJobs';
-export  {uploadUserProfileImageJob, uploadDocumentPdfJob, uploadProductImagesJob} from './handlers/uploadImagesJobs';
-
-export const {
-    verificationCodeEmail,
-    welcomeEmail,
-    inviteEnterpriseAdminEmail
-} = EmailJobs;
+export {verificationCodeEmail, welcomeEmail, inviteEnterpriseAdminEmail} from './handlers/EmailJobs';
+export { uploadUserProfileImageJob, uploadDocumentPdfJob, uploadProductImagesJob } from './handlers/uploadImagesJobs';
+export { deleteFileCloudinaryJob } from './handlers/deleteFileCloudinary';
