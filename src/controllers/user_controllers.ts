@@ -281,9 +281,14 @@ class userController {
             return res.status(400).json({ message: "User ID not found in cookies" });
         }
 
+        const { companyId } = req.params;
+        if (!companyId) {
+            return res.status(400).json({ message: "Company ID is required" });
+        }
+
         try {
-            const result = await UserService.deleteAllAssociationRequests();
-            return res.status(200).json({success: true, message: result});
+            const result = await UserService.deleteAllAssociationRequestsByCompanyId(companyId);
+            return res.status(200).json({success: true, message: `Successfully deleted ${result} association requests for the company`});
         } catch (error: any) {
             const statusCode = error.status || 500;
             return res.status(statusCode).json({

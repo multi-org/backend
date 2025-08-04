@@ -381,7 +381,7 @@ export class UserServices {
     return { message: "Association rejected successfully" };
   }
 
-  async deleteAllAssociationRequests() {
+  async deleteAllAssociationRequestsByCompanyId(companyId: string) {
     logger.info("Deleting all association requests");
 
     const keys = await getKeysByPrefix("association");
@@ -390,22 +390,33 @@ export class UserServices {
       throw new CustomError("No association requests found", 404);
     }
 
+    let deletedCount = 0;
+
     await Promise.all(
       keys.map(async (key) => {
         const associationsData = await getData("association", key);
-        if (associationsData) {
+        const isCompanyMatch = associationsData.companyId === companyId;
+
+        if (isCompanyMatch) {
           await delData("association", key);
           Queue.add(
             "deleteFileCloudinary",
             { cloudinaryId: associationsData.cloudinaryId },
             { priority: 1 }
           );
+          deletedCount++;
+          logger.info(`Deleted association request for userId: ${key}`);
         }
       })
     );
 
-    logger.info("All association requests deleted successfully");
-    return { message: "All association requests deleted successfully" };
+    if (deletedCount === 0) {
+      logger.warn(`No association requests found for company: ${companyId}`);
+      throw new CustomError("No association requests found for this company", 404);
+    }
+
+    logger.info(`All association requests deleted successfully. Total deleted: ${deletedCount}`);
+    return deletedCount;
   }
 
   private async getFromCompaniesWithUserAndCompanyData( associationRequests: requestUserAssociation[]) {
