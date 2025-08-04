@@ -42,9 +42,10 @@ export const uploadDocumentPdfJob = {
       userId: string;
       userCpf: string;
       companyId: string;
+      requestType: string;
     };
   }) {
-    const { localFilePath, userId, userCpf, companyId } = data;
+    const { localFilePath, userId, userCpf, companyId, requestType } = data;
 
     try {
       logger.info(`Job: Starting uploadDocumentPdf for user`);
@@ -53,7 +54,8 @@ export const uploadDocumentPdfJob = {
         localFilePath,
         userId,
         userCpf,
-        companyId
+        companyId,
+        requestType
       );
 
       logger.info(`Job: uploadDocumentPdf completed successfully for user`);

@@ -146,7 +146,7 @@ class uploadService {
     }
   }
 
-  async uploadDocumentPdfAssociation(localFilePath: string, userId: string, userCpf: string, companyId: string): Promise<any> {
+  async uploadDocumentPdfAssociation(localFilePath: string, userId: string, userCpf: string, companyId: string, requestType: string): Promise<any> {
     
     if (!fs.existsSync(localFilePath)) {
       logger.error(`File not found: ${localFilePath}`);
@@ -169,15 +169,16 @@ class uploadService {
         companyId,
         userCpf,
         documentUrl: result.secure_url,
-      uploadedAt: new Date().toISOString(),
+        uploadedAt: new Date().toISOString(),
         requiredAt: new Date().toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'}),
-        cloudinaryId: result.public_id
-      };
-
-    const newRequestAssociationRedisData = await dataSave({ prefix: 'association', key: userId, value: associationData, ttl: 2678400 })
-    if (!newRequestAssociationRedisData) {
-        logger.error("Failed to save association data in Redis");
-        throw new CustomError("Failed to save association data", 500);
+        cloudinaryId: result.public_id,
+        requestType
+    };
+    
+    const newRequestAssociationOrRepresentativeRedisData = await dataSave({ prefix: requestType, key: userId, value: associationData, ttl: 2678400 })
+    if (!newRequestAssociationOrRepresentativeRedisData) {
+      logger.error("Failed to save association data in Redis");
+      throw new CustomError("Failed to save association data", 500);
     }
 
     logger.info("Association data saved in Redis successfully");
