@@ -6,7 +6,7 @@ import {checkCompanyPermission, checkPermission} from '@app/middlewares/checkPer
 // rotas básicas
 const enterpriseRoutes = Router();
 enterpriseRoutes.post('/', jwtRequired, checkPermission('create:company'), enterpriseController.createCompany);
-enterpriseRoutes.get('/all', jwtRequired, checkCompanyPermission('read:company'));
+enterpriseRoutes.get('/all', jwtRequired, enterpriseController.getAllCompanys);
 enterpriseRoutes.get('/search/:searchTerm', jwtRequired, enterpriseController.searchEnterpriseMultipleFields);
 
 // rotas de convite

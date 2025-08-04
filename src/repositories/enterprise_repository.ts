@@ -70,6 +70,25 @@ export class EnterpriseRepository {
         });
     }
 
+    async findAllEnterprises() {
+        return await prisma.company.findMany({
+            where: {
+                status: 'ACTIVE'
+            },
+            include: {
+                Address: true,
+                legalRepresentatives: {
+                    include: {
+                        user: true
+                    }
+                }
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+    }
+
     async findEnterpriseByPhone(phone: string) {
         return await prisma.company.findFirst({
             where: {
@@ -137,7 +156,7 @@ export class EnterpriseRepository {
         return representative;
     }
 
-    async addLegalRepresentative(userId: string, enterpriseId: string) {
+    async addLegalRepresentative(userId: string, enterpriseId: string, documentUrl?: string) {
         const representative = await prisma.legalRepresentative.create({
             data: {
                 user: {
@@ -145,7 +164,8 @@ export class EnterpriseRepository {
                 },
                 company: {
                     connect: { id: enterpriseId }
-                }
+                },
+                documentUrl: documentUrl
             }
         });
         return representative;

@@ -14,8 +14,11 @@ userRoutes.post('/logout', jwtRequired, userController.logout);
 userRoutes.get('/me', jwtRequired, userController.getMe);
 userRoutes.post('/address', jwtRequired, userController.createAddress);
 
-userRoutes.post('/request/association/:companyId', jwtRequired, uploadDocuments.single('raw'), userController.requestAssociation);
-userRoutes.get("/all/associations/request", jwtRequired, checkPermission("get_all_requests:company_associate"), userController.getAllAssociations);
-userRoutes.post("/association/confirmation/:userId/:companyId", jwtRequired, checkCompanyPermission('accept:company_associate'), userController.associationToCompanyConfirmation);
+// para associados
+userRoutes.post('/request/associationOrLegalRepresentative/:companyId', jwtRequired, uploadDocuments.single('document'), userController.requestAssociation);
+userRoutes.get("/all/associationOrLegalRepresentative/request", jwtRequired, checkPermission("get_all_requests:company_associate"), userController.getAllRequests);
+userRoutes.post("/associationOrLegalRepresentative/confirmation/:userId/:companyId", jwtRequired, checkCompanyPermission('accept:company_associate'), userController.requestsToCompanyConfirmation);
+userRoutes.delete("/associationOrLegalRepresentative/reject/:userId/:companyId", jwtRequired, checkCompanyPermission('reject:company_associate'), userController.requestsToCompanyReject);
+userRoutes.delete("/all/associationOrLegalRepresentative/reject/:companyId", jwtRequired, checkCompanyPermission('reject:company_associate'), userController.deleteAllRequests);
 
 export default userRoutes;

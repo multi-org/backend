@@ -6,7 +6,7 @@
 
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
+  previewFeatures = []
 }
 
 datasource db {
@@ -65,6 +65,15 @@ enum OwnerType {
   SUBSIDIARY @map("filial")
   @@schema("multi")
 }
+
+enum chargingModel {
+  POR_DIA @map("por dia")
+  POR_HORA @map("por hora")
+  AMBOS @map("ambos") // Para equipamentos que podem ser por hora ou dia
+
+  @@schema("multi")
+}
+
 
 model User {
   userId          String     @unique @id @default(uuid()) @db.Uuid
@@ -181,6 +190,7 @@ model Company {
   updatedAt             DateTime @default(now()) @updatedAt
   associateDiscountRate Decimal  @default(0.0) @db.Decimal(5, 4) 
   createdBy             String   @db.Uuid
+  ownerType             OwnerType @default(ENTERPRISE)
 
   legalRepresentatives    LegalRepresentative[]
   CompanyAssociates       CompanyAssociate[]
@@ -206,6 +216,7 @@ model Subsidiary {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   createdBy    String   @db.Uuid
+  ownerType    OwnerType @default(SUBSIDIARY)
 
   Address Address?
    
@@ -294,25 +305,45 @@ model Product {
   title         String      @db.VarChar(255) 
   description   String      @db.VarChar(300)
   ownerId       String      @db.Uuid 
-  ownerType     OwnerType
   type          ProductType
-  basePrice     Decimal     @db.Decimal(10, 2) 
-  unity         String?    @db.VarChar(50) // Unidade de medida, ex: "hora", "dia", "mês"
+
+  dailyPrice    Decimal?    @db.Decimal(10, 2)  // Preço por dia
+  hourlyPrice   Decimal?    @db.Decimal(10, 2)  // Preço por hora
+
+  chargingModel  chargingModel @default(POR_DIA)
+  unity         String?     @db.VarChar(50) // UNIDADE
   category      String      @db.VarChar(500)
   imagesUrls    String[]    @default([]) @db.VarChar(1000)
   status        Status      @default(ACTIVE) 
+
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   createdBy     String      @db.Uuid
 
-  rents                   Rent[]
-  productAvailability     ProductAvailability[]
+  rents                     Rent[]
+  productAvailability       ProductAvailability[]
+  ProductWeeklyAvailability ProductWeeklyAvailability[]
 
-  spaceProduct            SpaceProduct?
-  servicesProduct         ServicesProduct?
-  equipamentProduct       EquipamentProduct?
+  spaceProduct              SpaceProduct?
+  servicesProduct           ServicesProduct?
+  equipamentProduct         EquipamentProduct?
 
   @@map("products")  
+  @@schema("multi")
+}
+
+model ProductWeeklyAvailability{
+  productId   String      @db.Uuid
+  product     Product     @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  dayOfWeek   Int         // 0 = Domingo, 1 = Segunda, ..., 6 = Sábado
+  startTime   String      @db.VarChar(5) // Formato HH:MM
+  endTime     String      @db.VarChar(5) // Formato HH:MM
+  isAvailable Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@id([productId, dayOfWeek])
+  @@map("product_weekly_availabilities")
   @@schema("multi")
 }
 
