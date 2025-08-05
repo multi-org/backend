@@ -505,7 +505,8 @@ export class UserServices {
               id: user.userId,
               name: user.name,
               email: user.email,
-              profileImage: user.profileImageUrl || null,
+            profileImage: user.profileImageUrl || null,
+              phoneNumber: user.phoneNumber,
             }
           : {
               id: request.userId,
