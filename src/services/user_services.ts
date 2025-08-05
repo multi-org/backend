@@ -1,12 +1,29 @@
 import userRepository from "@app/repositories/user_repository";
 import enterpriseRepository from "@app/repositories/enterprise_repository";
 import enterpriseServices from "./enterprise_services";
-import {createUserDTOS, UserAddress, requestUserAssociation} from "@app/models/User_models";
-import { dataSave, delData, getData, getKeysByPrefix,} from "@app/models/redis_models";
+import {
+  createUserDTOS,
+  UserAddress,
+  requestUserAssociation,
+} from "@app/models/User_models";
+import {
+  dataSave,
+  delData,
+  getData,
+  getKeysByPrefix,
+} from "@app/models/redis_models";
 
 import { logger, CustomError } from "@app/utils/logger";
-import { convertDateToDatabase, convertDateToUser, validationCpf, verifyBirthDate} from "@app/utils/basicFunctions";
-import {sendVerificationCodeToRedis, verifyCode} from "@app/utils/functionsToRedis";
+import {
+  convertDateToDatabase,
+  convertDateToUser,
+  validationCpf,
+  verifyBirthDate,
+} from "@app/utils/basicFunctions";
+import {
+  sendVerificationCodeToRedis,
+  verifyCode,
+} from "@app/utils/functionsToRedis";
 
 import { generateToken } from "@app/middlewares/global_middleware";
 
@@ -140,14 +157,11 @@ export class UserServices {
       throw new CustomError("Failed to create user in the database", 500);
     }
 
-    const defaultRoleName =
-      await enterpriseRepository.findRoleByName("commonUser");
-    if (!defaultRoleName) {
-      logger.error("Default role not found");
-      throw new CustomError("Default role not found", 500);
+    const assignRoleUser = await userRepository.assignRoleToUser(newUser.userId, "commonUser");
+    if(!assignRoleUser) {
+      logger.error("Failed to assign role to user");
+      throw new CustomError("Failed to assign role to user", 500);
     }
-
-    await userRepository.assignRoleToUser(newUser.userId, defaultRoleName.id);
 
     const token = await generateToken(newUser.userId, email);
     if (!token) {
@@ -191,8 +205,8 @@ export class UserServices {
       token,
       userName: user.name,
       photoPerfil: user.profileImageUrl ? user.profileImageUrl : null,
-      userRoles: userRoles?.userRoles
-        ? userRoles.userRoles.map((role) => role.role.name)
+      userRoles: userRoles?.userSystemRoles
+        ? userRoles.userSystemRoles.map((rl) => rl.role)
         : [],
     };
   }
@@ -257,7 +271,8 @@ export class UserServices {
     userId: string,
     companyId: string,
     userCpf: string,
-    localFilePath: string
+    localFilePath: string,
+    requestType: string
   ) {
     logger.info("Starting association registration process");
 
@@ -284,7 +299,13 @@ export class UserServices {
 
     const uploadDocumentPdf = await Queue.add(
       "uploadDocumentPdf",
-      { localFilePath, userId, userCpf, companyId },
+      {
+        localFilePath,
+        userId,
+        userCpf,
+        companyId,
+        requestType,
+      },
       { priority: 1 }
     );
     if (!uploadDocumentPdf) {
@@ -297,66 +318,69 @@ export class UserServices {
     return { message: "Association request created successfully" };
   }
 
-  async getAllAssociations() {
-    logger.info("Retrieving all association requests");
+  async getAllRepresentativeOrAssociateRequests(typeRequest: string) {
+    logger.info("Retrieving all representative or associate requests");
 
-    const keys = await getKeysByPrefix("association");
+    const keys = await getKeysByPrefix(typeRequest);
     if (!keys || keys.length === 0) {
-      logger.warn("No association requests found");
-      throw new CustomError("No association requests found", 404);
+      logger.warn(`No ${typeRequest} requests found`);
+      throw new CustomError(`No ${typeRequest} requests found`, 404);
     }
 
-    const associationRequest = await Promise.all(
+    const representativeRequest = await Promise.all(
       keys.map(async (key) => {
-        const associationsData = await getData("association", key);
+        const associationsData = await getData(typeRequest, key);
         return { ...associationsData, userId: key };
       })
     );
 
-    return await this.getFromCompaniesWithUserAndCompanyData(
-      associationRequest
-    );
+    return await this.getFromCompaniesWithUserAndCompanyData(representativeRequest);
   }
 
-  async associationToCompanyConfirmation(userAssociation: string) {
+  async requestsToCompanyConfirmation(userAssociation: string, typeRequest: string) {
     logger.info("Confirming association with company");
 
     const user = await this.getMe(userAssociation);
 
-    const associationDataRedis = await getData("association", user.id);
+    const associationDataRedis = await getData(typeRequest, user.id);
     if (!associationDataRedis) {
       logger.warn("No association data found for userId:" + user.id);
       throw new CustomError("Association not found", 404);
     }
 
-    const createAssociation = await userRepository.addUserAsCompanyAssociate(
-      user.id,
-      associationDataRedis.companyId,
-      associationDataRedis.documentUrl,
-      associationDataRedis.userCpf
-    );
-    if (!createAssociation) {
-      logger.error("Failed to create association in the database");
-      throw new CustomError(
-        "Failed to create association in the database",
-        500
-      );
-    }
-    await delData("association", user.id);
+    let result;
+    let roleLabel = "";
 
-    logger.info("Association confirmed successfully");
+    if (typeRequest === 'associate') {
+      result = await userRepository.addUserAsCompanyAssociate(user.id, associationDataRedis.companyId, associationDataRedis.documentUrl, associationDataRedis.userCpf);
+      roleLabel = "association";
+    }
+
+    else if (typeRequest === 'representative') { 
+      result = await enterpriseRepository.addLegalRepresentative(user.id, associationDataRedis.companyId, associationDataRedis.documentUrl)
+      roleLabel = "representative";
+    }
+
+    if (!result) {
+      logger.error(`Failed to create ${roleLabel} in the database`);
+      throw new CustomError(`Failed to create ${roleLabel} in the database`, 500);
+    }
+
+    await delData(typeRequest, user.id);
+    logger.info(`${typeRequest} confirmed successfully`);
+
     return {
       message: "Association confirmed successfully",
-      association: createAssociation,
-    };
+      [roleLabel as string]: result,
+    } as Record<string, any>;
   }
 
-  async associationToCompanyReject(userId: string, companyId: string) {
+  async requestsToCompanyReject(userId: string, companyId: string, typeRequest: string) {
     logger.info("Rejecting association with company");
 
     const user = await this.getMe(userId);
 
-    const associationDataRedis = await getData("association", userId);
+    const associationDataRedis = await getData(typeRequest, userId);
     if (!associationDataRedis) {
       logger.warn("No association data found for userId:" + userId);
       throw new CustomError("Association not found", 404);
@@ -370,7 +394,7 @@ export class UserServices {
       );
     }
 
-    await delData("association", userId);
+    await delData(typeRequest, userId);
     Queue.add(
       "deleteFileCloudinary",
       { cloudinaryId: associationDataRedis.cloudinaryId },
@@ -381,100 +405,130 @@ export class UserServices {
     return { message: "Association rejected successfully" };
   }
 
-  async deleteAllAssociationRequests() {
+  async deleteAllRequestsByCompanyId(companyId: string, typeRequest: string) {
     logger.info("Deleting all association requests");
 
-    const keys = await getKeysByPrefix("association");
+    const keys = await getKeysByPrefix(typeRequest);
     if (!keys || keys.length === 0) {
       logger.warn("No association requests found");
       throw new CustomError("No association requests found", 404);
     }
 
+    let deletedCount = 0;
+
     await Promise.all(
       keys.map(async (key) => {
         const associationsData = await getData("association", key);
-        if (associationsData) {
-          await delData("association", key);
+        const isCompanyMatch = associationsData.companyId === companyId;
+
+        if (isCompanyMatch) {
+          await delData(typeRequest, key);
           Queue.add(
             "deleteFileCloudinary",
             { cloudinaryId: associationsData.cloudinaryId },
             { priority: 1 }
           );
+          deletedCount++;
+          logger.info(`Deleted association request for userId: ${key}`);
         }
       })
     );
 
-    logger.info("All association requests deleted successfully");
-    return { message: "All association requests deleted successfully" };
+    if (deletedCount === 0) {
+      logger.warn(`No association requests found for company: ${companyId}`);
+      throw new CustomError(
+        "No association requests found for this company",
+        404
+      );
+    }
+
+    logger.info(
+      `All association requests deleted successfully. Total deleted: ${deletedCount}`
+    );
+    return deletedCount;
   }
 
   private async getFromCompaniesWithUserAndCompanyData( associationRequests: requestUserAssociation[]) {
     logger.info("Fetching user and company data for association");
 
-    const uniqueuserids = [...new Set(associationRequests.map(request => request.userId))];
+    const uniqueuserids = [
+      ...new Set(associationRequests.map((request) => request.userId)),
+    ];
     const userPromises = uniqueuserids.map(async (userId) => {
-        try {
-            const user = await userRepository.findUserById(userId);
-            return { userId, user };
-        } catch (error) {
-            logger.warn(`User not found: ${userId}`);
-            return { userId, user: null };
-        }
-      })
+      try {
+        const user = await userRepository.findUserById(userId);
+        return { userId, user };
+      } catch (error) {
+        logger.warn(`User not found: ${userId}`);
+        return { userId, user: null };
+      }
+    });
 
-    const uniqueCompanyIds = [...new Set(associationRequests.map(request => request.companyId))];
+    const uniqueCompanyIds = [
+      ...new Set(associationRequests.map((request) => request.companyId)),
+    ];
+    
     const companyPromises = uniqueCompanyIds.map(async (companyId) => {
-        try {
-            const company = await enterpriseRepository.findEnterpriseById(companyId);
-            return { companyId, company };
-        } catch (error) {
-            logger.warn(`Company not found: ${companyId}`);
-            return { companyId, company: null };
-        }
+      try {
+        const company =
+          await enterpriseRepository.findEnterpriseById(companyId);
+        return { companyId, company };
+      } catch (error) {
+        logger.warn(`Company not found: ${companyId}`);
+        return { companyId, company: null };
+      }
     });
 
     const [usersResults, companiesResults] = await Promise.all([
-        Promise.all(userPromises),
-        Promise.all(companyPromises)
+      Promise.all(userPromises),
+      Promise.all(companyPromises),
     ]);
 
-    const usersMap = new Map(usersResults.map(result => [result.userId, result.user]));
-    const companiesMap = new Map(companiesResults.map(result => [result.companyId, result.company]));
+    const usersMap = new Map(
+      usersResults.map((result) => [result.userId, result.user])
+    );
+    const companiesMap = new Map(
+      companiesResults.map((result) => [result.companyId, result.company])
+    );
 
-      const enrichedAssociations = associationRequests.map((request) => {
-          const user = usersMap.get(request.userId);
-          const company = companiesMap.get(request.companyId);
+    const enrichedAssociations = associationRequests.map((request) => {
+      const user = usersMap.get(request.userId);
+      const company = companiesMap.get(request.companyId);
 
-          return {
-            ...request,
-            userId: user ? {
-            id: user.userId,
-            name: user.name,
-            email: user.email,
-            profileImage: user.profileImageUrl || null
-            } : {
-            id: request.userId,
-            name: "⚠️ USUÁRIO REMOVIDO/INEXISTENTE",
-            email: "❌ Possível atividade de BOT detectada",
-            status: "SUSPICIOUS_REQUEST",
-            alert: "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema"
+      return {
+        ...request,
+        userId: user
+          ? {
+              id: user.userId,
+              name: user.name,
+              email: user.email,
+              profileImage: user.profileImageUrl || null,
+            }
+          : {
+              id: request.userId,
+              name: "⚠️ USUÁRIO REMOVIDO/INEXISTENTE",
+              email: "❌ Possível atividade de BOT detectada",
+              status: "SUSPICIOUS_REQUEST",
+              alert:
+                "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema",
             },
-            companyId: company ? {
-            id: company.id,
-            name: company.popularName || company.legalName,
-            cnpj: company.cnpj
-            } : {
-            id: request.companyId,
-            name: "⚠️ EMPRESA REMOVIDA/INEXISTENTE",
-            status: "COMPANY_NOT_FOUND",
-            alert: "Esta empresa pode ter sido removida do sistema"
-            }  
-          }
-      });
+        companyId: company
+          ? {
+              id: company.id,
+              name: company.popularName || company.legalName,
+              cnpj: company.cnpj,
+            }
+          : {
+              id: request.companyId,
+              name: "⚠️ EMPRESA REMOVIDA/INEXISTENTE",
+              status: "COMPANY_NOT_FOUND",
+              alert: "Esta empresa pode ter sido removida do sistema",
+            },
+      };
+    });
 
     logger.info("User and company data fetched successfully");
     return enrichedAssociations;
-      
   }
 }
 

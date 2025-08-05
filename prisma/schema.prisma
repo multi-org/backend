@@ -92,87 +92,39 @@ model User {
   isEmailVerified Boolean    @default(false)
   isPhoneVerified Boolean    @default(false)
 
-  userRoles UserRole[]
   legalRepresentatives    LegalRepresentative[]
   CompanyAssociates CompanyAssociate[]
   Address Address?
   rents Rent[]
   Payment Payment[]
-  enterpriseUserRoles enterpriseUserRoles[]
+  userSystemRoles userSystemRole[]
+  UserCompanyRole UserCompanyRole[]
 
   @@map("users")
   @@schema("multi")
 }
 
-model Role {
-  id    Int @id @default(autoincrement()) @db.Integer
-  name  String @db.VarChar(255)
-  description String @db.VarChar(1000)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
-  rolesPermissions RolesPermission[]
-  UserRoles UserRole[]
-  enterpriseUserRoles enterpriseUserRoles[]
-
-  @@map("roles")
-  @@schema("multi")
-  
-}
-
-model Permission {
-  id            Int @id @default(autoincrement()) @db.Integer
-  action        String @db.VarChar(50)
-  resource   String @db.VarChar(50)
-  description   String? @db.VarChar(1000)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @default(now()) @updatedAt
-
-  rolesPermissions RolesPermission[]
-
-  @@map("permissions")
-  @@schema("multi")
-}
-
-model RolesPermission {
-  roleId   Int
-  role     Role  @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade) 
-  permissionId Int
-  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
-  @@id([roleId, permissionId])
-  @@map("roles_permissions")
-  @@schema("multi")
-}
-
-model UserRole {
-  userId    String @db.Uuid
-  user      User   @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
-  roleId    Int
-  role      Role   @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
-
-  @@id([userId, roleId])
-  @@map("user_roles")
-  @@schema("multi")
-}
-
-model enterpriseUserRoles {
-  id Int @id @default(autoincrement()) @db.Integer
+model userSystemRole {
   userId String @db.Uuid
+  role String @db.VarChar(50) @default("commonUser")
   user User @relation(fields: [userId], references: [userId], onDelete: Cascade, onUpdate: Cascade)
-  companyId String   @db.Uuid
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  roleId Int
-  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
 
-  @@unique([userId, companyId, roleId])
-  @@map("enterprise_user_roles")
+  @@id([userId, role])
+  @@map("user_system_roles")
+  @@schema("multi")
+}
+
+model UserCompanyRole {
+  id        Int     @id @default(autoincrement())
+  userId    String  @db.Uuid
+  companyId String  @db.Uuid
+  role      String  @db.VarChar(50) // ex: 'adminCompany'
+
+  user      User    @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, companyId, role])
+  @@map("user_company_roles")
   @@schema("multi")
 }
 
@@ -196,12 +148,10 @@ model Company {
   CompanyAssociates       CompanyAssociate[]
   Address                 Address?
   subsidiaries            Subsidiary[]
-  enterpriseUserRoles enterpriseUserRoles[]
+  UserCompanyRole UserCompanyRole[]
 
   @@map("enterprises")  
   @@schema("multi")
-  
-  
 }
 
 model Subsidiary {

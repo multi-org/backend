@@ -206,6 +206,7 @@ class userController {
         }
 
         const { companyId } = req.params;
+        const typeRequest = req.query.request;
         const userId = req.userId!;
         const { userCpf } = req.body;
         const localFilePath = req.file.path;
@@ -219,7 +220,11 @@ class userController {
                 });
             }
 
-            const association = await UserService.requestAssociationUser(userId, companyId, userCpf, localFilePath);
+            if (!typeRequest || (typeRequest !== 'associate' && typeRequest !== 'representative')) {
+                return res.status(400).json({ message: "Invalid request type. Use 'associate' or 'representative'." });
+            }
+
+            const association = await UserService.requestAssociationUser(userId, companyId, userCpf, localFilePath, typeRequest);
             return res.status(201).json(association);
         } catch (error: any) {
             const statusCode = error.status || 500;
@@ -229,10 +234,16 @@ class userController {
         }
     }
 
-    async getAllAssociations(req: AuthRequest, res: Response) { 
-        try {
-            const associations = await UserService.getAllAssociations();
-            return res.status(200).json(associations);
+    async getAllRequests(req: AuthRequest, res: Response) { 
+      try {
+        const typeRequest = req.query.request;
+
+        if (!typeRequest || (typeRequest !== 'associate' && typeRequest !== 'representative')) {
+          return res.status(400).json({ message: "Invalid request type. Use 'associate' or 'representative'." });
+        }
+
+        const associations = await UserService.getAllRepresentativeOrAssociateRequests(typeRequest);
+        return res.status(200).json(associations);
         } catch (error: any) {
             const statusCode = error.status || 500;
             return res.status(statusCode).json({
@@ -241,55 +252,78 @@ class userController {
         }
     }
 
-    async associationToCompanyConfirmation(req: AuthRequest, res: Response) {
-        const { userId } = req.params;
-        if (!userId) {
-            return res.status(400).json({ message: "User ID is required" });
-        }
+    async requestsToCompanyConfirmation(req: AuthRequest, res: Response) {
+      const { userId } = req.params;
+      const typeRequest = req.query.request;
+      
+      if (!typeRequest || (typeRequest !== 'associate' && typeRequest !== 'representative')) {
+        return res.status(400).json({ message: "Invalid request type. Use 'associate' or 'representative'." });
+      }
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
 
-        try {
-            const confirmation = await UserService.associationToCompanyConfirmation(userId);
-            return res.status(200).json(confirmation);
-        } catch (error: any) {
-            const statusCode = error.status || 500;
-            return res.status(statusCode).json({
-                message: error.message || "Internal Server Error",
-            });
-        }
+      try {
+        const confirmation = await UserService.requestsToCompanyConfirmation(userId, typeRequest);
+        return res.status(200).json(confirmation);
+      } catch (error: any) {
+        const statusCode = error.status || 500;
+        return res.status(statusCode).json({
+          message: error.message || "Internal Server Error",
+        });
+      }
     }
 
-    async associationToCompanyReject(req: AuthRequest, res: Response) { 
-        const { userId, companyId } = req.params;
-        if (!userId || !companyId) {
-            return res.status(400).json({ message: "User ID and Company ID are required" });
-        }
+    async requestsToCompanyReject(req: AuthRequest, res: Response) { 
+      const { userId, companyId } = req.params;
+      const typeRequest = req.query.request;
 
-        try {
-            const rejection = await UserService.associationToCompanyReject(userId, companyId);
-            return res.status(200).json({success: true, message: rejection});
-        } catch (error: any) {
-            const statusCode = error.status || 500;
-            return res.status(statusCode).json({
-                message: error.message || "Internal Server Error",
-            });
-        }
+      if (!userId || !companyId) {
+       return res.status(400).json({ message: "User ID and Company ID are required" });
+     }
+      
+      if (!typeRequest || (typeRequest !== 'associate' && typeRequest !== 'representative')) {
+        return res.status(400).json({ message: "Invalid request type. Use 'associate' or 'representative'." });
+      }
+
+      try {
+        const rejection = await UserService.requestsToCompanyReject(userId, companyId, typeRequest);
+        return res.status(200).json({success: true, message: rejection});
+      } catch (error: any) {
+        const statusCode = error.status || 500;
+        return res.status(statusCode).json({
+          message: error.message || "Internal Server Error",
+        });
+      }
     }
 
-    async deleteAllAssociationRequests(req: AuthRequest, res: Response) { 
-        const userId = req.userId!;
-        if (!userId) {
-            return res.status(400).json({ message: "User ID not found in cookies" });
-        }
+    async deleteAllRequests(req: AuthRequest, res: Response) { 
+      const userId = req.userId!;
+      const typeRequest = req.query.request;
 
-        try {
-            const result = await UserService.deleteAllAssociationRequests();
-            return res.status(200).json({success: true, message: result});
-        } catch (error: any) {
-            const statusCode = error.status || 500;
-            return res.status(statusCode).json({
-                message: error.message || "Internal Server Error",
-            });
-        }
+      if (!userId) {
+        return res.status(400).json({ message: "User ID not found in cookies" });
+      }
+      
+      if (!typeRequest || (typeRequest !== 'associate' && typeRequest !== 'representative')) {
+        return res.status(400).json({ message: "Invalid request type. Use 'associate' or 'representative'." });
+      }
+
+      const { companyId } = req.params;
+      if (!companyId) {
+          return res.status(400).json({ message: "Company ID is required" });
+      }
+
+      try {
+          const result = await UserService.deleteAllRequestsByCompanyId(companyId, typeRequest);
+          return res.status(200).json({success: true, message: `Successfully deleted ${result} association requests for the company`});
+      } catch (error: any) {
+          const statusCode = error.status || 500;
+          return res.status(statusCode).json({
+              message: error.message || "Internal Server Error",
+          });
+      }
     }
 
 

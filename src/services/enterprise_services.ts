@@ -129,12 +129,6 @@ class EnterpriseServices {
             throw new CustomError("User does not have a role", 400);
         }
 
-        const roleId = await enterpriseRepository.findRoleByName(role);
-        if (!roleId) {
-            logger.warn(`Role ${role} not found`);
-            throw new CustomError("Role not found", 404);
-        }
-
         const existingEnterprise = await enterpriseRepository.findEnterpriseById(enterpriseId);
         if (!existingEnterprise) {
             logger.warn(`Enterprise with ID ${enterpriseId} not found`);
@@ -153,7 +147,7 @@ class EnterpriseServices {
             throw new CustomError("Failed to add legal representative", 500);
         }
 
-        const updatedUserRole = await userRepository.updateRoleUser(userId, roleId.id, userRole.roleId);
+        const updatedUserRole = await userRepository.updateRoleUser(userId, role);
         if (!updatedUserRole) {
             logger.error("Failed to update user role");
             throw new CustomError("Failed to update user role", 500);

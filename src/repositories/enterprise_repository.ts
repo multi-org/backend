@@ -156,7 +156,7 @@ export class EnterpriseRepository {
         return representative;
     }
 
-    async addLegalRepresentative(userId: string, enterpriseId: string) {
+    async addLegalRepresentative(userId: string, enterpriseId: string, documentUrl?: string) {
         const representative = await prisma.legalRepresentative.create({
             data: {
                 user: {
@@ -164,16 +164,17 @@ export class EnterpriseRepository {
                 },
                 company: {
                     connect: { id: enterpriseId }
-                }
+                },
+                documentUrl: documentUrl
             }
         });
         return representative;
     }
 
     async findRoleByName(roleName: string) {
-        const role = await prisma.role.findFirst({
+        const role = await prisma.userSystemRole.findFirst({
             where: {
-                name: roleName
+                role: roleName
             }
         });
         return role;
