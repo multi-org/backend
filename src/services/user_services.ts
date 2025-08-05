@@ -157,14 +157,11 @@ export class UserServices {
       throw new CustomError("Failed to create user in the database", 500);
     }
 
-    const defaultRoleName =
-      await enterpriseRepository.findRoleByName("commonUser");
-    if (!defaultRoleName) {
-      logger.error("Default role not found");
-      throw new CustomError("Default role not found", 500);
+    const assignRoleUser = await userRepository.assignRoleToUser(newUser.userId, "commonUser");
+    if(!assignRoleUser) {
+      logger.error("Failed to assign role to user");
+      throw new CustomError("Failed to assign role to user", 500);
     }
-
-    await userRepository.assignRoleToUser(newUser.userId, defaultRoleName.id);
 
     const token = await generateToken(newUser.userId, email);
     if (!token) {
@@ -208,8 +205,8 @@ export class UserServices {
       token,
       userName: user.name,
       photoPerfil: user.profileImageUrl ? user.profileImageUrl : null,
-      userRoles: userRoles?.userRoles
-        ? userRoles.userRoles.map((role) => role.role.name)
+      userRoles: userRoles?.userSystemRoles
+        ? userRoles.userSystemRoles.map((rl) => rl.role)
         : [],
     };
   }
@@ -332,7 +329,7 @@ export class UserServices {
 
     const representativeRequest = await Promise.all(
       keys.map(async (key) => {
-        const associationsData = await getData("representative", key);
+        const associationsData = await getData(typeRequest, key);
         return { ...associationsData, userId: key };
       })
     );
@@ -397,7 +394,7 @@ export class UserServices {
       );
     }
 
-    await delData("association", userId);
+    await delData(typeRequest, userId);
     Queue.add(
       "deleteFileCloudinary",
       { cloudinaryId: associationDataRedis.cloudinaryId },
@@ -425,7 +422,7 @@ export class UserServices {
         const isCompanyMatch = associationsData.companyId === companyId;
 
         if (isCompanyMatch) {
-          await delData("association", key);
+          await delData(typeRequest, key);
           Queue.add(
             "deleteFileCloudinary",
             { cloudinaryId: associationsData.cloudinaryId },

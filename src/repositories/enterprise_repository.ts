@@ -172,9 +172,9 @@ export class EnterpriseRepository {
     }
 
     async findRoleByName(roleName: string) {
-        const role = await prisma.role.findFirst({
+        const role = await prisma.userSystemRole.findFirst({
             where: {
-                name: roleName
+                role: roleName
             }
         });
         return role;

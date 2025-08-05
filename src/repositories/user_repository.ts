@@ -59,48 +59,16 @@ export class UserRepository {
                 birthDate: true,
                 isPhoneVerified: true,
                 profileImageUrl: true,
-                userRoles: {
+                userSystemRoles: {
                     select: {
-                        role: {
-                            select: {
-                                id: true,
-                                name: true,
-                                description: true,
-                                rolesPermissions: {
-                                    select: {
-                                        permission: {
-                                            select: {
-                                                action: true,
-                                                resource: true,
-                                                description: true
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        role: true
                     }
                 },
-                enterpriseUserRoles: {
+                UserCompanyRole: {
                     select: {
-                        role: {
-                            select: {
-                                id: true,
-                                name: true,
-                                rolesPermissions: {
-                                    select: {
-                                        permission: {
-                                            select: {
-                                                action: true,
-                                                resource: true,
-                                                description: true
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
+                        role: true,
                         userId: true,
+                        companyId: true,
                     }
                 }
             }
@@ -108,11 +76,11 @@ export class UserRepository {
         return user;
     }
 
-    async assignRoleToUser(userId: string, roleId: number) { 
-        return await prisma.userRole.create({
+    async assignRoleToUser(userId: string, roleType: string) { 
+        return await prisma.userSystemRole.create({
             data: {
                 userId: userId,
-                roleId: roleId
+                role: roleType
             }
         })
     }
@@ -128,7 +96,7 @@ export class UserRepository {
     }
 
     async findUserRole(userId: string) {
-        const userRole = await prisma.userRole.findFirst({
+        const userRole = await prisma.userSystemRole.findFirst({
             where: {
                 userId: userId
             }
@@ -136,20 +104,18 @@ export class UserRepository {
         return userRole;
     }
     
-    async updateRoleUser(userId: string, role: number, userRole: number) {
-        const user = await prisma.userRole.update({
+    async updateRoleUser(userId: string, role: string) {
+        return await prisma.userSystemRole.update({
             where: {
-                userId_roleId: {
+                userId_role: {
                     userId: userId,
-                    roleId: userRole
+                    role: role
                 }
             },
             data: {
-                roleId: role
+                role: role
             }
         });
-
-        return user;
     }
 
     async addUserAsCompanyAssociate(userId: string, companyId: string, documentUrl: string, userCpf: string) {

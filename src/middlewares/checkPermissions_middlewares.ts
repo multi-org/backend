@@ -1,44 +1,26 @@
-import userRepository from '../repositories/user_repository.js';
+import {permissions, hasPermission, RoleName, isValidRoleName, Permission} from './permission'
 import { logger, CustomError } from '@app/utils/logger.js';
 import { Response, NextFunction } from 'express';
-import {AuthRequest} from './global_middleware.js'
+import { AuthRequest } from './global_middleware.js'
+import userRepository from '@app/repositories/user_repository'
 
-export const checkPermission = (requiredPermission: string) => {
+export const checkPermission = (requiredPermission: Permission) => {
     return async (req: AuthRequest, res: Response, next: NextFunction) => {
         try {
             const userId = req.userId!;
             const user = await userRepository.findUserById(userId);
 
-            if (!user || !user.userRoles?.length) {
-                logger.error('User not found or no roles assigned.');
-                throw new CustomError('User not found or no roles assigned.', 404);
+            if (!user) {
+                logger.error(`Authenticated user not found in database: ${userId}`);
+                throw new CustomError('User session invalid', 401);
             }
 
-            const [requeiredAction, requiredResource] = requiredPermission.split(':');
-            if (!requeiredAction || !requiredResource) {
-                logger.error('Invalid permission format. Expected format: action:resource');
-                throw new CustomError('Invalid permission format. Expected format: action:resource', 400);
-            }
+            await validatePermissionFormat(requiredPermission);
 
-            let hasPermission = false;
-            for (const userRole of user.userRoles) {
-                const role = userRole.role;
-                const rolePermissions = role?.rolesPermissions || [];
-                
-                for (const {permission} of rolePermissions) {
-                    if (permission?.action === requeiredAction &&
-                        permission?.resource === requiredResource)
-                    {
-                        hasPermission = true;
-                        break;
-                    }
-                }
-                
-                if (hasPermission) break;
-            }
+            const isSystemAllowed = user.userSystemRoles?.some((roleObj) => isValidRoleName(roleObj.role) && hasPermission(roleObj.role as RoleName, requiredPermission));
 
-            if (!hasPermission) {
-                logger.warn(`User does not have permission: ${requiredPermission}`);
+            if (!isSystemAllowed) {
+                logger.warn(`User does not have system permission: ${requiredPermission}`);
                 throw new CustomError(`Access denied. You do not have permission: ${requiredPermission}`, 403);
             }
 
@@ -55,7 +37,7 @@ export const checkPermission = (requiredPermission: string) => {
     };
 };
 
-export const checkCompanyPermission = (requiredPermission: string) => { 
+export const checkCompanyPermission = (requiredPermission: Permission) => { 
     return async (req: AuthRequest, res: Response, next: NextFunction) => {
         try {
             const userId = req.userId!;
@@ -66,31 +48,30 @@ export const checkCompanyPermission = (requiredPermission: string) => {
                 throw new CustomError('Company ID not provided', 400);
             }
 
-            const [requeiredAction, requiredResource] = requiredPermission.split(':');
-            if (!requeiredAction || !requiredResource) {
-                logger.error('Invalid permission format. Expected format: action:resource');
-                throw new CustomError('Invalid permission format. Expected format: action:resource', 400);
-            }
+            await validatePermissionFormat(requiredPermission);
 
             const user = await userRepository.findUserById(userId);
+
             if (!user) {
-                logger.error('User not found.');
-                throw new CustomError('User not found', 404);
+                logger.error(`Authenticated user not found in database: ${userId}`);
+                throw new CustomError('User session invalid', 401);
             }
 
-            const isSystemAdmin = user.userRoles?.some(r => r.role.name === 'adminUser' || r.role.name === 'adminCompany');
-            if (isSystemAdmin) {
+            // verifica se o usuário é admin do sistema
+            const isSystemAdmin = user?.userSystemRoles.some((rl) => [ 'adminSystemUser', 'adminCompany'].includes(rl.role));
+            if (isSystemAdmin && hasPermission('adminSystemUser', requiredPermission)) {
                 logger.info(`RBAC: System admin autorizado para ${requiredPermission}.`);
                 return next();
             }
 
-            const hasCompanyPermission = user.enterpriseUserRoles?.some(er => er.userId === userId && er.role?.rolesPermissions?.some(({permission}) => 
-                permission?.action === requeiredAction &&
-                permission?.resource === requiredResource
-            ));
+            // verifica se o usário tem permissao na emppresa
+            const isCompanyAllowed = user.UserCompanyRole?.some((roleObj) =>
+                roleObj.companyId === companyId && 
+                isValidRoleName(roleObj.role) &&
+                hasPermission(roleObj.role, requiredPermission)
+            );
 
-
-            if (!hasCompanyPermission) {
+            if (!isCompanyAllowed) {
                 logger.warn(`Access denied for company: ${requiredPermission}`);
                 throw new CustomError(`Access denied for company: ${requiredPermission}`, 403);
             }
@@ -106,4 +87,12 @@ export const checkCompanyPermission = (requiredPermission: string) => {
             });
         }   
     } 
+}
+
+async function validatePermissionFormat(permission: string) {
+  const [action, resource] = permission.split(':');
+  if (!action || !resource) {
+    throw new CustomError('Invalid permission format. Expected format: action:resource', 400);
+  }
+  return { action, resource };
 }
