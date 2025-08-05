@@ -380,16 +380,16 @@ export class UserServices {
 
     const user = await this.getMe(userId);
 
-    const associationDataRedis = await getData(typeRequest, userId);
-    if (!associationDataRedis) {
-      logger.warn("No association data found for userId:" + userId);
-      throw new CustomError("Association not found", 404);
+    const requestDataRedis = await getData(typeRequest, userId);
+    if (!requestDataRedis) {
+      logger.warn("No request data found for userId:" + userId);
+      throw new CustomError("Request not found", 404);
     }
 
-    if (associationDataRedis.companyId !== companyId) {
-      logger.warn("Company ID does not match the association data");
+    if (requestDataRedis.companyId !== companyId) {
+      logger.warn("Company ID does not match the request data");
       throw new CustomError(
-        "Company ID does not match the association data",
+        "Company ID does not match the request data",
         400
       );
     }
@@ -397,16 +397,16 @@ export class UserServices {
     await delData(typeRequest, userId);
     Queue.add(
       "deleteFileCloudinary",
-      { cloudinaryId: associationDataRedis.cloudinaryId },
+      { cloudinaryId: requestDataRedis.cloudinaryId },
       { priority: 1 }
     );
 
-    logger.info("Association rejected successfully");
-    return { message: "Association rejected successfully" };
+    logger.info("Request rejected successfully");
+    return { message: "Request rejected successfully" };
   }
 
   async deleteAllRequestsByCompanyId(companyId: string, typeRequest: string) {
-    logger.info("Deleting all association requests");
+    logger.info("Deleting all requests");
 
     const keys = await getKeysByPrefix(typeRequest);
     if (!keys || keys.length === 0) {
