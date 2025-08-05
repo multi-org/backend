@@ -130,5 +130,6 @@ dist
 .pnp.*
 
 /src/generated/prisma
+/temp_uploads/
 
 src/generated

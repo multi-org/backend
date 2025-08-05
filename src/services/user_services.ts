@@ -157,14 +157,11 @@ export class UserServices {
       throw new CustomError("Failed to create user in the database", 500);
     }
 
-    const defaultRoleName =
-      await enterpriseRepository.findRoleByName("commonUser");
-    if (!defaultRoleName) {
-      logger.error("Default role not found");
-      throw new CustomError("Default role not found", 500);
+    const assignRoleUser = await userRepository.assignRoleToUser(newUser.userId, "commonUser");
+    if(!assignRoleUser) {
+      logger.error("Failed to assign role to user");
+      throw new CustomError("Failed to assign role to user", 500);
     }
-
-    await userRepository.assignRoleToUser(newUser.userId, defaultRoleName.id);
 
     const token = await generateToken(newUser.userId, email);
     if (!token) {
@@ -208,8 +205,8 @@ export class UserServices {
       token,
       userName: user.name,
       photoPerfil: user.profileImageUrl ? user.profileImageUrl : null,
-      userRoles: userRoles?.userRoles
-        ? userRoles.userRoles.map((role) => role.role.name)
+      userRoles: userRoles?.userSystemRoles
+        ? userRoles.userSystemRoles.map((rl) => rl.role)
         : [],
     };
   }
@@ -275,7 +272,8 @@ export class UserServices {
     companyId: string,
     userCpf: string,
     localFilePath: string,
-    requestType: string
+    requestType: string,
+    position?: string
   ) {
     logger.info("Starting association registration process");
 
@@ -308,9 +306,11 @@ export class UserServices {
         userCpf,
         companyId,
         requestType,
+        ...(requestType === 'representative' && {position})
       },
       { priority: 1 }
     );
+
     if (!uploadDocumentPdf) {
       logger.error("Failed to upload document PDF");
       throw new CustomError("Failed to upload document PDF", 500);
@@ -318,7 +318,7 @@ export class UserServices {
 
     logger.info("Document PDF uploaded successfully");
 
-    return { message: "Association request created successfully" };
+    return true;
   }
 
   async getAllRepresentativeOrAssociateRequests(typeRequest: string) {
@@ -332,7 +332,7 @@ export class UserServices {
 
     const representativeRequest = await Promise.all(
       keys.map(async (key) => {
-        const associationsData = await getData("representative", key);
+        const associationsData = await getData(typeRequest, key);
         return { ...associationsData, userId: key };
       })
     );
@@ -360,7 +360,7 @@ export class UserServices {
     }
 
     else if (typeRequest === 'representative') { 
-      result = await enterpriseRepository.addLegalRepresentative(user.id, associationDataRedis.companyId, associationDataRedis.documentUrl)
+      result = await enterpriseRepository.addLegalRepresentative(user.id, associationDataRedis.companyId, associationDataRedis.documentUrl, associationDataRedis.position);
       roleLabel = "representative";
     }
 
@@ -383,33 +383,33 @@ export class UserServices {
 
     const user = await this.getMe(userId);
 
-    const associationDataRedis = await getData(typeRequest, userId);
-    if (!associationDataRedis) {
-      logger.warn("No association data found for userId:" + userId);
-      throw new CustomError("Association not found", 404);
+    const requestDataRedis = await getData(typeRequest, userId);
+    if (!requestDataRedis) {
+      logger.warn("No request data found for userId:" + userId);
+      throw new CustomError("Request not found", 404);
     }
 
-    if (associationDataRedis.companyId !== companyId) {
-      logger.warn("Company ID does not match the association data");
+    if (requestDataRedis.companyId !== companyId) {
+      logger.warn("Company ID does not match the request data");
       throw new CustomError(
-        "Company ID does not match the association data",
+        "Company ID does not match the request data",
         400
       );
     }
 
-    await delData("association", userId);
+    await delData(typeRequest, userId);
     Queue.add(
       "deleteFileCloudinary",
-      { cloudinaryId: associationDataRedis.cloudinaryId },
+      { cloudinaryId: requestDataRedis.cloudinaryId },
       { priority: 1 }
     );
 
-    logger.info("Association rejected successfully");
-    return { message: "Association rejected successfully" };
+    logger.info("Request rejected successfully");
+    return { message: "Request rejected successfully" };
   }
 
   async deleteAllRequestsByCompanyId(companyId: string, typeRequest: string) {
-    logger.info("Deleting all association requests");
+    logger.info("Deleting all requests");
 
     const keys = await getKeysByPrefix(typeRequest);
     if (!keys || keys.length === 0) {
@@ -425,7 +425,7 @@ export class UserServices {
         const isCompanyMatch = associationsData.companyId === companyId;
 
         if (isCompanyMatch) {
-          await delData("association", key);
+          await delData(typeRequest, key);
           Queue.add(
             "deleteFileCloudinary",
             { cloudinaryId: associationsData.cloudinaryId },
@@ -518,8 +518,9 @@ export class UserServices {
         companyId: company
           ? {
               id: company.id,
-              name: company.popularName || company.legalName,
-              cnpj: company.cnpj,
+              popularName: company.popularName,
+            cnpj: company.cnpj,
+              legalName: company.legalName,
             }
           : {
               id: request.companyId,

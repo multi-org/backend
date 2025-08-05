@@ -208,7 +208,7 @@ class userController {
         const { companyId } = req.params;
         const typeRequest = req.query.request;
         const userId = req.userId!;
-        const { userCpf } = req.body;
+        const { userCpf, position } = req.body;
         const localFilePath = req.file.path;
 
         try {
@@ -223,9 +223,13 @@ class userController {
             if (!typeRequest || (typeRequest !== 'associate' && typeRequest !== 'representative')) {
                 return res.status(400).json({ message: "Invalid request type. Use 'associate' or 'representative'." });
             }
+            
+            if (typeRequest === 'representative' && !position) {
+                return res.status(400).json({ message: "Position is required for legal representative requests" });
+            }
 
-            const association = await UserService.requestAssociationUser(userId, companyId, userCpf, localFilePath, typeRequest);
-            return res.status(201).json(association);
+            const association = await UserService.requestAssociationUser(userId, companyId, userCpf, localFilePath, typeRequest, position);
+            return res.status(201).json({message: "Association request created successfully", success: association});
         } catch (error: any) {
             const statusCode = error.status || 500;
             return res.status(statusCode).json({

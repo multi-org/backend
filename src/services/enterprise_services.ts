@@ -129,12 +129,6 @@ class EnterpriseServices {
             throw new CustomError("User does not have a role", 400);
         }
 
-        const roleId = await enterpriseRepository.findRoleByName(role);
-        if (!roleId) {
-            logger.warn(`Role ${role} not found`);
-            throw new CustomError("Role not found", 404);
-        }
-
         const existingEnterprise = await enterpriseRepository.findEnterpriseById(enterpriseId);
         if (!existingEnterprise) {
             logger.warn(`Enterprise with ID ${enterpriseId} not found`);
@@ -153,7 +147,7 @@ class EnterpriseServices {
             throw new CustomError("Failed to add legal representative", 500);
         }
 
-        const updatedUserRole = await userRepository.updateRoleUser(userId, roleId.id, userRole.roleId);
+        const updatedUserRole = await userRepository.updateRoleUser(userId, role);
         if (!updatedUserRole) {
             logger.error("Failed to update user role");
             throw new CustomError("Failed to update user role", 500);
@@ -288,6 +282,23 @@ class EnterpriseServices {
 
         return enterprise;
     }
+
+    async rejectCompanyRequest(cnpj: string) {
+        logger.info(`Rejecting company request for CNPJ: ${cnpj}`);
+
+        const companyDataRedis = await getData('company', cnpj);
+        if (!companyDataRedis) {
+            logger.warn(`No company data found for CNPJ: ${cnpj}`);
+            throw new CustomError("Company data not found", 404);
+        }
+        console.log("companyDataRedis", companyDataRedis);
+
+        await delData('company', cnpj);
+        logger.info(`Company request for CNPJ ${cnpj} rejected successfully`);
+
+        logger.info(`Company request for CNPJ ${cnpj} rejected successfully`);
+        return true;
+     }
 
 }
 

@@ -146,7 +146,7 @@ class uploadService {
     }
   }
 
-  async uploadDocumentPdfAssociation(localFilePath: string, userId: string, userCpf: string, companyId: string, requestType: string): Promise<any> {
+  async uploadDocumentPdfAssociation(localFilePath: string, userId: string, userCpf: string, companyId: string, requestType: string, position?: string): Promise<any> {
     
     if (!fs.existsSync(localFilePath)) {
       logger.error(`File not found: ${localFilePath}`);
@@ -172,7 +172,8 @@ class uploadService {
         uploadedAt: new Date().toISOString(),
         requiredAt: new Date().toLocaleString('pt-BR', {timeZone: 'America/Sao_Paulo'}),
         cloudinaryId: result.public_id,
-        requestType
+      requestType,
+        ...(requestType === 'representative' && { position })
     };
     
     const newRequestAssociationOrRepresentativeRedisData = await dataSave({ prefix: requestType, key: userId, value: associationData, ttl: 2678400 })
