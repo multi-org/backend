@@ -167,6 +167,23 @@ class EnterpriseController {
             });
         }
     }
+
+    async rejectCompanyRequest(req: AuthRequest, res: Response) {
+        const { cnpj } = req.params;
+        if (!cnpj) {
+            return res.status(400).json({success: false, message: "CNPJ is required"});
+        }
+
+        try {
+            const response = await EnterpriseService.rejectCompanyRequest(cnpj);
+            return res.status(200).json({success: response, message: "Request rejected successfully"});
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
 }
 
 export default new EnterpriseController();
