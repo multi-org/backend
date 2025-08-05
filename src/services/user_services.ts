@@ -272,7 +272,8 @@ export class UserServices {
     companyId: string,
     userCpf: string,
     localFilePath: string,
-    requestType: string
+    requestType: string,
+    position?: string
   ) {
     logger.info("Starting association registration process");
 
@@ -305,9 +306,11 @@ export class UserServices {
         userCpf,
         companyId,
         requestType,
+        ...(requestType === 'representative' && {position})
       },
       { priority: 1 }
     );
+
     if (!uploadDocumentPdf) {
       logger.error("Failed to upload document PDF");
       throw new CustomError("Failed to upload document PDF", 500);
@@ -315,7 +318,7 @@ export class UserServices {
 
     logger.info("Document PDF uploaded successfully");
 
-    return { message: "Association request created successfully" };
+    return true;
   }
 
   async getAllRepresentativeOrAssociateRequests(typeRequest: string) {
@@ -357,7 +360,7 @@ export class UserServices {
     }
 
     else if (typeRequest === 'representative') { 
-      result = await enterpriseRepository.addLegalRepresentative(user.id, associationDataRedis.companyId, associationDataRedis.documentUrl)
+      result = await enterpriseRepository.addLegalRepresentative(user.id, associationDataRedis.companyId, associationDataRedis.documentUrl, associationDataRedis.position);
       roleLabel = "representative";
     }
 
@@ -515,8 +518,9 @@ export class UserServices {
         companyId: company
           ? {
               id: company.id,
-              name: company.popularName || company.legalName,
-              cnpj: company.cnpj,
+              popularName: company.popularName,
+            cnpj: company.cnpj,
+              legalName: company.legalName,
             }
           : {
               id: request.companyId,
