@@ -76,7 +76,7 @@ export class UserRepository {
         return user;
     }
 
-    async assignRoleToUser(userId: string, roleType: string) { 
+    async assignRoleToUser(userId: string, roleType: string) {
         return await prisma.userSystemRole.create({
             data: {
                 userId: userId,
@@ -142,6 +142,22 @@ export class UserRepository {
         });
     }
 
+    async findUserAssociateToCompany(userId: string, companyId: string) {
+        return await prisma.companyAssociate.findUnique({
+            where: {
+                userId_companyId: { userId: userId, companyId: companyId }
+            }
+        })
+    }
+
+    async findUserRepresentativeToCompany(userId: string, companyId: string) {
+        return await prisma.legalRepresentative.findUnique({
+            where: {
+                companyId_userId: { userId: userId, companyId: companyId }
+            }
+        })
+    }
 }
+
 
 export default new UserRepository();
