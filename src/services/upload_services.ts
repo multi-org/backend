@@ -104,16 +104,34 @@ class uploadService {
 
   async uploadProductImage(localFilePath: string[], productId: string): Promise<any[]>{
     const uploadedImageUrls: string[] = [];
+    const failedUploads: string[] = [];
 
     try {
-      for (const filePath of localFilePath) {
+      logger.info(`Starting uploadProductImage for product ${productId}`, {
+        totalFiles: localFilePath.length,
+        filePaths: localFilePath
+      });
+      
+      if (!localFilePath || localFilePath.length === 0) {
+      throw new CustomError('No file paths provided for upload', 400);
+    }
+
+      for (let i = 0; i < localFilePath.length; i++) {
+        const filePath = localFilePath[i];
+        
+        logger.info(`Processing file ${i + 1}/${localFilePath.length}: ${filePath}`);
+
+        // Verificar se arquivo existe
         if (!fs.existsSync(filePath)) {
           logger.warn(`File not found for product image upload: ${filePath}. Skipping.`);
-          continue; // Skip this file if it doesn't exist
+          failedUploads.push(filePath);
+          continue;
         }
 
+        let uploadSuccessful = false;
         try {
           logger.info(`Uploading product image: ${filePath} for product ${productId}`);
+
           const result = await cloudinary.uploader.upload(filePath, {
             folder: `products/${productId}`,
             public_id: `product_${productId}_${Date.now()}_${path.basename(filePath, path.extname(filePath))}`,
@@ -124,12 +142,27 @@ class uploadService {
               { format: "webp" } // otimizar o formato
             ],
           });
+
           uploadedImageUrls.push(result.secure_url);
-          logger.info(`Image uploaded: ${result.secure_url}`);
+          uploadSuccessful = true;
+
+          logger.info(`Image uploaded successfully:`, {
+            originalPath: filePath,
+            cloudinaryUrl: result.secure_url,
+            publicId: result.public_id,
+            bytes: result.bytes
+          });
+
         } catch (uploadError: any) {
-          logger.error(`Failed to upload image ${filePath} to Cloudinary: ${uploadError.message}`);
+          logger.error(`Failed to upload image ${filePath} to Cloudinary:`, {
+            error: uploadError.message,
+            stack: uploadError.stack,
+            productId,
+            filePath
+          });
+          failedUploads.push(filePath);
         } finally {
-          await this.cleanupTempFile(filePath); // Limpar arquivo temporário individualmente
+          await this.cleanupTempFile(filePath); // Limpar arquivo temporário individualmente 
         }
       }
 
@@ -137,7 +170,18 @@ class uploadService {
         await this.cleanupTempDirectory(localFilePath[0]);
       }
 
-      logger.info(`Finished processing product images for product ${productId}. Uploaded ${uploadedImageUrls.length} images.`);
+      logger.info(`Finished processing product images for product ${productId}:`, {
+        totalProcessed: localFilePath.length,
+        successfulUploads: uploadedImageUrls.length,
+        failedUploads: failedUploads.length,
+        failedFiles: failedUploads,
+        uploadedUrls: uploadedImageUrls
+      });
+
+      if (uploadedImageUrls.length === 0) {
+        throw new CustomError(`No images were successfully uploaded for product ${productId}. All ${localFilePath.length} uploads failed.`, 500);
+      }
+      
       return uploadedImageUrls;
 
     } catch (error) {

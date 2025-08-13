@@ -296,6 +296,13 @@ export class UserServices {
       throw new CustomError("User CPF does not match the provided CPF", 400);
     }
 
+    const requestExists = requestType === 'associate' ? await userRepository.findUserAssociateToCompany(userId, companyId) : await userRepository.findUserRepresentativeToCompany(userId, companyId);
+    if (requestExists) {
+      const associationType = requestType === 'associate' ? 'associate' : 'legal representative';
+      logger.warn(`User already exists as ${associationType} for this company`);
+      throw new CustomError(`User already exists as ${associationType} for this company`, 400);
+    }
+
     logger.info("User and company validated successfully");
 
     const uploadDocumentPdf = await Queue.add(
@@ -505,7 +512,8 @@ export class UserServices {
               id: user.userId,
               name: user.name,
               email: user.email,
-              profileImage: user.profileImageUrl || null,
+            profileImage: user.profileImageUrl || null,
+              phoneNumber: user.phoneNumber,
             }
           : {
               id: request.userId,

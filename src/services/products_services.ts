@@ -22,7 +22,6 @@ class ProductsServices {
             throw new CustomError("Product with this title already exists for this enterprise", 400);
         }
 
-        console.log("me parece parar aqui", productData)
         await this.validateSpecificProductData(productData);
         await this.validateProductWithPrice(productData);
 
@@ -35,7 +34,7 @@ class ProductsServices {
         if (imagesFiles && imagesFiles.length > 0) {
             const localFilePaths = imagesFiles.map(file => file.path);
             Queue.add('uploadProductImages', {
-                images: localFilePaths,
+                imagePaths: localFilePaths,
                 productId: created.product.id
             }, { priority: 1 });
         }
@@ -199,7 +198,6 @@ class ProductsServices {
     }
 
     private async validateSpecificProductData(productData: ProductCreateInput) {
-        console.log("chegamos", productData)
         switch (productData.type) {
             case "SPACE":
                 if (!productData.spaceDetails) {

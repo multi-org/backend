@@ -11,7 +11,23 @@ class ProdutoController {
 
   static async createProduct(req: AuthRequest, res: Response) {
     try {
-      const validationResult = validateProductCreation(req.body);
+      const parseBody = {
+        ...req.body,
+        hourlyPrice: req.body.hourlyPrice ? parseFloat(req.body.hourlyPrice) : undefined,
+        dailyPrice: req.body.dailyPrice ? parseFloat(req.body.dailyPrice) : undefined,
+
+        weeklyAvailability: req.body.weeklyAvailability ? JSON.parse(req.body.weeklyAvailability) : undefined,
+
+        spaceDetails: {
+          capacity: req.body.capacity ? parseInt(req.body.capacity) : undefined,
+          area: req.body.area ? parseFloat(req.body.area) : undefined,
+        },
+      };
+      delete parseBody.capacity;
+      delete parseBody.area;
+      delete parseBody.images;
+
+      const validationResult = validateProductCreation(parseBody);
       if (!validationResult.success) {
         return res.status(400).json({ errors: validationResult.error.errors });
       }
