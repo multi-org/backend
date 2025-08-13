@@ -37,7 +37,6 @@ class ProdutoController {
       const ownerId = req.params.companyId;
 
       const imagesFiles = req.files as Express.Multer.File[];
-      console.log("Imagens recebidas:", imagesFiles);
 
       const newProduct = await productServices.createProduct(
         productData,
