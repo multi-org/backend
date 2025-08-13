@@ -157,18 +157,35 @@ export class EnterpriseRepository {
     }
 
     async addLegalRepresentative(userId: string, enterpriseId: string, documentUrl?: string, position?: string) {
-        const representative = await prisma.legalRepresentative.create({
-            data: {
-                user: {
-                    connect: { userId: userId }
-                },
-                company: {
-                    connect: { id: enterpriseId }
-                },
-                documentUrl: documentUrl,
-                position: position
+        const representative = await prisma.$transaction(async (ts) => {
+            const addLegalRepresentative = await ts.legalRepresentative.create({
+                data: {
+                    user: {
+                        connect: { userId: userId }
+                    },
+                    company: {
+                        connect: { id: enterpriseId }
+                    },
+                    documentUrl: documentUrl,
+                    position: position
+                }
+            });
+
+            const addUserCompanyRole = await ts.userCompanyRole.create({
+                data: {
+                    userId: userId,
+                    companyId: enterpriseId,
+                    role: 'adminCompany'
+                }
+            });
+
+            return {
+                ...addLegalRepresentative,
+                userCompanyRole: addUserCompanyRole
             }
+
         });
+
         return representative;
     }
 
@@ -180,8 +197,6 @@ export class EnterpriseRepository {
         });
         return role;
     }
-
-
 }
 
 export default new EnterpriseRepository();

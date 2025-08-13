@@ -89,15 +89,24 @@ export const uploadProductImagesJob = {
         productId,
       });
 
+      // Verificar se os caminhos das imagens existem
+      if (!imagePaths || imagePaths.length === 0) {
+        throw new Error("No image paths provided");
+      }
+
+      // Log detalhado antes de chamar o serviço
+      logger.info("Calling uploadService.uploadProductImage with paths:", {
+        imagePaths,
+        productId
+      });
+
       const uploadedImageUrls = await uploadService.uploadProductImage(
         imagePaths,
         productId
       );
 
       if (uploadedImageUrls.length > 0) {
-        await productRepository.updateProduct(productId, {
-          imagesUrls: uploadedImageUrls,
-        });
+        await productRepository.uploadImagesProducts(productId, uploadedImageUrls);
         logger.info(
           `Product ${productId} updated with ${uploadedImageUrls.length} image URLs.`
         );
@@ -115,7 +124,7 @@ export const uploadProductImagesJob = {
       return {
         success: true,
         productId: productId,
-        uploadedImageUrls: uploadProductImagesJob,
+        uploadedImageUrls: uploadedImageUrls,
       };
     } catch (error) {
       logger.error("Job: Error in uploadProductImages", { error });
