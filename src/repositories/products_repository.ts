@@ -119,9 +119,7 @@ export class ProductsRepository {
         const updateProducts = await prisma.product.update({
             where: { id: productId },
             data: {
-                imagesUrls: {
-                    push: imagesUrlsProducts
-                }
+                imagesUrls: imagesUrlsProducts
             }
         });
 

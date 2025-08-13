@@ -263,7 +263,7 @@ model Product {
   chargingModel  chargingModel @default(POR_DIA)
   unity         String?     @db.VarChar(50) // UNIDADE
   category      String      @db.VarChar(500)
-  imagesUrls    String[]    @default([]) @db.VarChar(1000)
+  imagesUrls    String[]    @default([])
   status        Status      @default(ACTIVE) 
 
   createdAt     DateTime    @default(now())
