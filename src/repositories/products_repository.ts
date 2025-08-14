@@ -154,43 +154,36 @@ export class ProductsRepository {
         return product;
     }
 
-    async findProductsByOwnerId(ownerId: string, page: number = 1, limit: number = 10) {
-        const skip = (page - 1) * limit;
+    async findAllProductsToSystem() {
+        return  await prisma.product.findMany({
+            where: { status: "ACTIVE" },
+            include: {
+                spaceProduct: true,
+                servicesProduct: true,
+                equipamentProduct: true,
+                ProductWeeklyAvailability: true
+            },
+            orderBy: {
+                createdAt: "desc"
+            }
+        });
+    }
 
-        const [products, total] = await Promise.all([
-            prisma.product.findMany({
-                where: {
-                    ownerId,
-                    status: "ACTIVE"
-                },
-                include: {
+    async findProductsByOwnerId(ownerId: string) {
+        return await prisma.product.findMany({
+            where: {
+                ownerId,
+                status: "ACTIVE"
+            },
+            include: {
                     spaceProduct: true,
                     servicesProduct: true,
                     equipamentProduct: true,
                 },
-                skip,
-                take: limit,
-                orderBy: {
-                    createdAt: "desc"
-                }
-            }),
-            prisma.product.count({
-                where: {
-                    ownerId,
-                    status: "ACTIVE"
-                }
-            })
-        ])
-
-        return {
-            products,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit)
+            orderBy: {
+                createdAt: "desc"
             }
-        };
+        });
     }
 
     async updateProduct(productId: string, updateData: Partial<ProductCreateInput>) {
