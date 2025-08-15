@@ -67,6 +67,9 @@ export class EnterpriseRepository {
                 id: id,
                 status: 'ACTIVE'
             },
+            include: {
+                Address: true,
+            }
         });
     }
 
