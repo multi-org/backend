@@ -10,6 +10,7 @@ import productServices from "@app/services/products_services";
 class ProdutoController {
   static async createProduct(req: AuthRequest, res: Response) {
     try {
+      console.log(req.body);
       const parseBody = {
         ...req.body,
         hourlyPrice: req.body.hourlyPrice ? parseFloat(req.body.hourlyPrice) : undefined,
@@ -32,6 +33,8 @@ class ProdutoController {
       delete parseBody.capacity;
       delete parseBody.area;
       delete parseBody.images;
+      delete parseBody.durationMinutes;
+      delete parseBody.stock;
 
       const validationResult = validateProductCreation(parseBody);
       if (!validationResult.success) {
@@ -77,7 +80,7 @@ class ProdutoController {
             totalProducts: result.products.length,
             spaceCount: result.products.filter(p => p.type === 'SPACE').length,
             serviceCount: result.products.filter(p => p.type === 'SERVICE').length,
-            equipmentCount: result.products.filter(p => p.type === 'EQUIPAMENT').length,
+            equipmentCount: result.products.filter(p => p.type === 'EQUIPMENT').length,
           },
         });
     } catch (error: any) {

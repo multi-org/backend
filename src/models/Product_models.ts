@@ -37,7 +37,7 @@ const weeklyAvailabilitySchema = z.object({
 const ProductBaseSchema = z.object({
   title: z.string().min(1, "Título é obrigatório").max(255, "Título deve ter no máximo 255 caracteres"),
   description: z.string().min(1, "Descrição é obrigatória").max(300, "Descrição deve ter no máximo 300 caracteres"),
-  type: z.enum(["SPACE", "SERVICE", "EQUIPAMENT"], {
+  type: z.enum(["SPACE", "SERVICE", "EQUIPMENT"], {
     errorMap: () => ({ message: "Tipo deve ser SPACE, SERVICE ou EQUIPAMENT" })
   }),
   category: z.string().min(1, "Categoria é obrigatória").max(500, "Categoria deve ter no máximo 500 caracteres"),
@@ -76,7 +76,7 @@ export type WeeklyAvailability = z.infer<typeof weeklyAvailabilitySchema>;
 export type ProductCreateInput = z.infer<typeof ProductBaseSchema> & (
   { type: "SPACE"; spaceDetails: z.infer<typeof spaceProductSchema> } |
   { type: "SERVICE"; serviceDetails: z.infer<typeof serviceProductSchema> } |
-  { type: "EQUIPAMENT"; equipmentDetails: z.infer<typeof equipmentProductSchema> }
+  { type: "EQUIPMENT"; equipmentDetails: z.infer<typeof equipmentProductSchema> }
 );
 
 // Função de validação melhorada
@@ -84,9 +84,12 @@ export function validateProductCreation(data: any):
   { success: true; data: ProductCreateInput } |
   { success: false; error: z.ZodError } {
   
+  
   // Validar dados base
   const baseResult = ProductBaseSchema.safeParse(data);
   if (!baseResult.success) {
+    console.log(baseResult.error);
+    console.log("chegou");
     return baseResult;
   }
 
@@ -125,7 +128,7 @@ export function validateProductCreation(data: any):
       }
       break;
 
-    case "EQUIPAMENT":
+    case "EQUIPMENT":
       if (!data.equipmentDetails) {
         return {
           success: false,
