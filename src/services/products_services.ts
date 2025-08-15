@@ -227,7 +227,7 @@ class ProductsServices {
                     throw new CustomError("Service duration must be greater than zero", 400);
                 }
                 break;
-            case "EQUIPAMENT":
+            case "EQUIPMENT":
                 if (!productData.equipmentDetails) {
                     throw new CustomError("Equipment details are required for EQUIPAMENT type products", 400);
                 }

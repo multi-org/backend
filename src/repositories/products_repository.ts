@@ -81,7 +81,7 @@ export class ProductsRepository {
                     });
                     break;
                 
-                case "EQUIPAMENT":
+                case "EQUIPMENT":
                     const { brand, model, specifications, stock } = productData.equipmentDetails;
                     specificProduct = await tx.equipamentProduct.create({
                         data: {
