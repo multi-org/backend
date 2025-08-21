@@ -95,6 +95,24 @@ class ProductsServices {
         return productWithUserData;
     }
 
+    async findProductById(productId: string) {
+        logger.info("Fetching product by ID", productId );
+
+        const product = await productRepository.findProductById(productId);
+        
+        if (!product) {
+            logger.error("Product not found", { productId });
+            throw new CustomError("Produto não encontrado", 404);
+        }
+
+        if (product.status === 'DELETED') {
+            logger.error("Product is deleted", { productId });
+            throw new CustomError("Produto foi excluído", 410);
+        }
+
+        return product;
+    }
+
     async updateProduct(productId: string, updateData: Partial<ProductCreateInput>, imagesFiles?: Express.Multer.File[]) {
         logger.info("Starting product update process");
 
@@ -152,6 +170,21 @@ class ProductsServices {
         await this.getProductById(productId);
 
         const availability = await productRepository.getProductAvailability(productId, starDate, endDate);
+        if (!availability) {
+            logger.error("No availability found for this product", { productId });
+            throw new CustomError("Nenhuma disponibilidade encontrada para este produto", 404);
+        }
+
+        logger.info("Product availability fetched successfully", { productId });
+        return availability;
+    }
+
+    async findUniqueProductAvalability(productId: string, starDate: Date, endDate: Date) {
+        logger.info("Fetching product availability");
+
+        await this.getProductById(productId);
+
+        const availability = await productRepository.specificAvailability(productId, starDate, endDate);
         if (!availability) {
             logger.error("No availability found for this product", { productId });
             throw new CustomError("Nenhuma disponibilidade encontrada para este produto", 404);

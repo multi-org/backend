@@ -186,6 +186,24 @@ export class ProductsRepository {
         });
     }
 
+    async findProductWeeklyAvailability(productId: string) {
+        return await prisma.productWeeklyAvailability.findMany({
+            where: { productId }
+        });
+    }
+
+
+    async specificAvailability(productId: string, startDate: Date, endDate: Date) {
+        return await prisma.productAvailability.findFirst({
+            where: {
+                productId,
+                startDate: { lte: startDate },
+                endDate: { gte: endDate },
+                isAvailable: false
+            }
+        });
+    }
+
     async updateProduct(productId: string, updateData: Partial<ProductCreateInput>) {
         const { title, description, type, category, unity, chargingModel, weeklyAvailability, ...specificData } = updateData;
 
@@ -236,6 +254,12 @@ export class ProductsRepository {
         });
 
         return deleteProduct;
+    }
+
+    async findUniqueEquipamentDetails(productId: string) {
+        return await prisma.equipamentProduct.findUnique({
+            where: { productId }
+        });
     }
 
     async getProductAvailability(productId: string, startDate: Date, endDate: Date) {

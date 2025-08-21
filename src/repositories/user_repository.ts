@@ -143,6 +143,7 @@ export class UserRepository {
     }
 
     async findUserAssociateToCompany(userId: string, companyId: string) {
+        console.log(userId, companyId)
         return await prisma.companyAssociate.findUnique({
             where: {
                 userId_companyId: { userId: userId, companyId: companyId }

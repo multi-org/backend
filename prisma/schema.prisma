@@ -241,8 +241,10 @@ model Payment {
   amount       Decimal       @db.Decimal(10, 2)
   method       PaymentMethod
   status       PaymentStatus @default(PENDING)
-  transactionId String?      @unique @db.VarChar(255) 
+  transactionId String?      @unique @db.VarChar(255)
+  pixCode      String?       @db.VarChar(500) // Código PIX para pagamentos PIX
   paidAt       DateTime?     
+  expiresAt    DateTime?     // Data de expiração para PIX
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -341,12 +343,15 @@ model Rent {
   product         Product       @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   paymentId       String?       @db.Uuid  @unique  
   payment         Payment?      @relation
-  description     String?       @db.VarChar(1000) 
+  description     String?       @db.VarChar(1000)
+  activityTitle   String        @db.VarChar(255) // Título da atividade
+  activityDescription String?   @db.VarChar(1000) // Descrição da atividade
   startDate       DateTime      @db.Date
   endDate         DateTime      @db.Date
   totalAmount     Decimal       @db.Decimal(10, 2) 
   discountApplied Decimal       @db.Decimal(10, 2) @default(0.0)
   status          RentStatus    @default(PENDING) 
+  chargingType    chargingModel @default(POR_DIA) // Tipo de cobrança usado neste aluguel
   
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt 
