@@ -10,7 +10,6 @@ import productServices from "@app/services/products_services";
 class ProdutoController {
   static async createProduct(req: AuthRequest, res: Response) {
     try {
-      console.log(req.body);
       const parseBody = {
         ...req.body,
         hourlyPrice: req.body.hourlyPrice ? parseFloat(req.body.hourlyPrice) : undefined,
@@ -24,9 +23,13 @@ class ProdutoController {
         },
         serviceDetails: {
           durationMinutes: req.body.durationMinutes ? parseInt(req.body.durationMinutes) : undefined,
+          requirements: req.body.requirements ? String(req.body.requirements) : null
         },
         equipmentDetails: {
           stock: req.body.stock ? parseInt(req.body.stock) : undefined,
+          brand: req.body.brand ? String(req.body.brand) : null,
+          model: req.body.model ? String(req.body.model) : null,
+          specifications: req.body.specifications ? String(req.body.specifications) : null
         }
       };
 
@@ -35,6 +38,9 @@ class ProdutoController {
       delete parseBody.images;
       delete parseBody.durationMinutes;
       delete parseBody.stock;
+      delete parseBody.brand;
+      delete parseBody.model;
+      delete parseBody.specifications;
 
       const validationResult = validateProductCreation(parseBody);
       if (!validationResult.success) {
