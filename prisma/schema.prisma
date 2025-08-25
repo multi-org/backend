@@ -267,6 +267,7 @@ model Product {
   category      String      @db.VarChar(500)
   imagesUrls    String[]    @default([])
   status        Status      @default(ACTIVE) 
+  discountPercentage Decimal @db.Decimal(10, 2) @default(10.0)
 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt

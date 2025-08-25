@@ -119,8 +119,8 @@ class RentalService {
 
         const associate = await userRepository.findUserAssociateToCompany(userId, product.ownerId);
         if (associate) {
-            discountAmount = baseAmount * 0.1; // 10% de desconto
-            totalAmount = baseAmount - discountAmount; // Valor final com desconto
+            discountAmount = baseAmount * (Number(product.discountPercentage) / 100);
+            totalAmount = baseAmount - discountAmount; 
         }
 
         logger.info(`Price calculation: baseAmount=${baseAmount}, discountAmount=${discountAmount}, totalAmount=${totalAmount}`);
