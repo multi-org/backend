@@ -8,6 +8,7 @@ import { dataSave, delData, getData, getKeysByPrefix } from '@app/models/redis_m
 import userRepository from '@app/repositories/user_repository';
 import enterpriseRepository from "@app/repositories/enterprise_repository";
 import useServices from "./user_services";
+import { Console } from "console";
 
 class EnterpriseServices {
     async createEnterprise(enterpriseData: EnterpriseDTOSWithAddress) {
@@ -42,8 +43,8 @@ class EnterpriseServices {
         const newEnterprise = await enterpriseRepository.createEnterprise(companyData, addressData);
         if (!newEnterprise) {
             logger.error("Failed to create enterprise");
-                throw new CustomError("Failed to create enterprise", 500);
-            }
+            throw new CustomError("Failed to create enterprise", 500);
+        }
 
         return { message: "Successfully created company", enterpriseName: newEnterprise.popularName };
     }
