@@ -46,6 +46,7 @@ const ProductBaseSchema = z.object({
 
   dailyPrice: z.number().min(0, "Preço da diária deve ser positivo").optional(),
   hourlyPrice: z.number().min(0, "Preço da hora deve ser positivo").optional(),
+  discountPercentage: z.number().min(1, "Porcentagem de desconto deve ser maior que 1").max(100, "O valor máximo de desconto não deve ser maior que 100%"),
 
   imagesUrls: z.array(z.string().url("URL de imagem inválida")).max(5, "Máximo de 5 URLs de imagens permitidas").optional(),
 
@@ -201,7 +202,8 @@ export interface ProductWithRelations {
     chargingModel: string;
     unity: string | null;
     dailyPrice: Decimal | null;
-    hourlyPrice: Decimal | null;
+  hourlyPrice: Decimal | null;
+  discountPercentage: Decimal,
     ownerId: string;
     createdBy: string;
     createdAt: Date;
