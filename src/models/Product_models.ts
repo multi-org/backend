@@ -236,3 +236,47 @@ export interface ProductWithRelations {
     productId: string;
   } | null;
 }
+
+export interface productAvailabilityInterface{
+
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  status: string;
+  category: string;
+  chargingModel: string;
+  unity: string | null;
+  dailyPrice: Decimal | null;
+  hourlyPrice: Decimal | null;
+  discountPercentage: Decimal,
+  ownerId: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+
+  ProductWeeklyAvailability: {
+    dayOfWeek: number;
+    isAvailable: boolean;
+    startTime: string;
+    endTime: string;
+    productId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+  productAvailability: {
+    id: string;
+    productId: string;
+    startDate: Date;
+    endDate: Date;
+    isAvailable: boolean;
+    priceOverride: Decimal | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+  rents: {
+    startDate: Date;
+    endDate: Date;
+    status: string;
+  }[];
+}

@@ -85,7 +85,7 @@ class ProductsServices {
             throw new CustomError("Produto não encontrado", 404);
         }
 
-        if (product.status === 'DELETED') {
+        else if (product.status === 'DELETED') {
             logger.error("Product is deleted", { productId });
             throw new CustomError("Produto foi excluído", 410);
         }

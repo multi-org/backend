@@ -338,6 +338,26 @@ export class ProductsRepository {
             }
         })
     }
+
+    async availableDatesProoduct(productId: string) {
+        return await prisma.product.findUnique({
+            where: { id: productId },
+            include: {
+                ProductWeeklyAvailability: true,
+                productAvailability: true,
+                rents: {
+                    where: {
+                        status: { in: ['PENDING', 'CONFIRMED'] }
+                    },
+                    select: {
+                        startDate: true,
+                        endDate: true,
+                        status: true
+                    }
+                }
+            }
+        });
+    }
 }
 
 export default new ProductsRepository();
