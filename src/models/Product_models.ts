@@ -46,7 +46,7 @@ const ProductBaseSchema = z.object({
 
   dailyPrice: z.number().min(0, "Preço da diária deve ser positivo").optional(),
   hourlyPrice: z.number().min(0, "Preço da hora deve ser positivo").optional(),
-  //discountPercentage: z.number().min(1, "Porcentagem de desconto deve ser maior que 1").max(100, "O valor máximo de desconto não deve ser maior que 100%"),
+  discountPercentage: z.number().min(1, "Porcentagem de desconto deve ser maior que 1").max(100, "O valor máximo de desconto não deve ser maior que 100%"),
 
   imagesUrls: z.array(z.string().url("URL de imagem inválida")).max(5, "Máximo de 5 URLs de imagens permitidas").optional(),
 
@@ -235,4 +235,48 @@ export interface ProductWithRelations {
     stock: number;
     productId: string;
   } | null;
+}
+
+export interface productAvailabilityInterface{
+
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  status: string;
+  category: string;
+  chargingModel: string;
+  unity: string | null;
+  dailyPrice: Decimal | null;
+  hourlyPrice: Decimal | null;
+  discountPercentage: Decimal,
+  ownerId: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+
+  ProductWeeklyAvailability: {
+    dayOfWeek: number;
+    isAvailable: boolean;
+    startTime: string;
+    endTime: string;
+    productId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+  productAvailability: {
+    id: string;
+    productId: string;
+    startDate: Date;
+    endDate: Date;
+    isAvailable: boolean;
+    priceOverride: Decimal | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+  rents: {
+    startDate: Date;
+    endDate: Date;
+    status: string;
+  }[];
 }
