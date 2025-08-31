@@ -31,10 +31,10 @@ class EnterpriseServices {
             throw new CustomError("Email already registered", 400);
         }
 
-        const existingEnterpriseWithCnpj = await enterpriseRepository.findEnterpriseByCnpj(enterpriseData.cnpj);
+        const existingEnterpriseWithCnpj = await enterpriseRepository.findEnterpriseByCnpjAnbPopularName(enterpriseData.cnpj, enterpriseData.popularName);
         if (existingEnterpriseWithCnpj) {
-            logger.warn(`Enterprise with CNPJ ${enterpriseData.cnpj} already exists`);
-            throw new CustomError("CNPJ already registered", 400);
+            logger.warn(`Enterprise with CNPJ ${enterpriseData.cnpj} and popular name ${enterpriseData.popularName} already exists`);
+            throw new CustomError("CNPJ and popular name already registered", 400);
         }
 
         const companyData = await extractCompanyData(enterpriseData);
@@ -172,10 +172,10 @@ class EnterpriseServices {
             throw new CustomError("Email already registered", 400);
         }
 
-        const existingEnterpriseWithCnpj = await enterpriseRepository.findEnterpriseByCnpj(enterpriseData.cnpj);
-        if (existingEnterpriseWithCnpj) {
-            logger.warn(`Enterprise with CNPJ ${enterpriseData.cnpj} already exists`);
-            throw new CustomError("CNPJ already registered", 400);
+        const existingEnterpriseWithCnpjAndPopularName = await enterpriseRepository.findEnterpriseByCnpjAnbPopularName(enterpriseData.cnpj, enterpriseData.popularName);
+        if (existingEnterpriseWithCnpjAndPopularName) {
+            logger.warn(`Enterprise with CNPJ ${enterpriseData.cnpj} and popular name ${enterpriseData.popularName} already exists`);
+            throw new CustomError("CNPJ and popular name already registered", 400);
         }
 
         const existingEnterpriseWithPhone = await enterpriseRepository.findEnterpriseByPhone(enterpriseData.phone);
