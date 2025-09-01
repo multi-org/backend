@@ -36,7 +36,25 @@ class AvailabilityController {
     }
   }
 
+  async getAvailableHours(req: AuthRequest, res: Response) {
+    try {
+      const { productId, date } = req.params;
 
+      const availableHours = await AvailabilityService.getAvailableHours(productId, date);
+
+      return res.status(200).json({
+        success: true,
+        data: availableHours,
+        message: 'Horários disponíveis obtidos com sucesso'
+      });
+    }catch (error: any) {
+      return res.status(400).json({
+        success: false,
+        message: error.message,
+        error: 'HOURS_AVAILABILITY_ERROR'
+      });
+    }
+  }
 }
 
 export default new AvailabilityController();

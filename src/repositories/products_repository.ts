@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { ProductCreateInput, WeeklyAvailability } from "@app/models/Product_models";
+import { P } from "pino";
 
 const prisma = new PrismaClient();
 
@@ -357,6 +358,35 @@ export class ProductsRepository {
                 }
             }
         });
+    }
+
+    async getAvailableHours(productId: string, date: string) {
+        const targetDate = new Date(date);
+        const dayOfWeek = targetDate.getDay();
+
+        return  await prisma.productWeeklyAvailability.findFirst({
+            where: {
+                productId,
+                dayOfWeek
+            }
+        });
+    }
+
+    async findRentsByDate(productId: string, dateString: string) { 
+        return await prisma.rent.findMany({
+        where: {
+          productId,
+          status: {
+            in: ['PENDING', 'CONFIRMED']
+          },
+          startDate: {
+            lte: new Date(dateString + 'T23:59:59')
+          },
+          endDate: {
+            gte: new Date(dateString + 'T00:00:00')
+          }
+        }
+      });
     }
 }
 

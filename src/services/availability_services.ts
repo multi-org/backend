@@ -50,7 +50,57 @@ class AvailabilityService {
     return availableDates;
   }
 
-  async defineDefaultRangeAvailableDates(options: AvailabilityOptions = {}, product: productAvailabilityInterface): Promise<AvailabilityDate[]> {
+  async getAvailableHours(productId: string, date: string) {
+    logger.info(`Fetching available hours for product ${productId} on date ${date}`);
+
+    if (!productId || productId.trim() === '') {
+      logger.error('Product ID is required');
+      throw new CustomError('Product ID is required', 400);
+    }
+
+    if (!date || date.trim() === '') {
+      logger.error('Date is required');
+      throw new CustomError('Date is required', 400);
+    }
+
+    const targetDate = new Date(date);
+    if (isNaN(targetDate.getTime())) {
+      logger.error('Invalid date format. Use YYYY-MM-DD');
+      throw new CustomError('Invalid date format. Use YYYY-MM-DD', 400);
+    }
+
+    // verificar se a data não é no passado
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    targetDate.setHours(0, 0, 0, 0);
+
+    if (targetDate < today) {
+      logger.error('Cannot check availability for past dates');
+      throw new CustomError('Cannot check availability for past dates', 400);
+    }
+
+    const weeklyAvailability = await productRepository.getAvailableHours(productId, date);
+
+    if (!weeklyAvailability) {
+      logger.error('No weekly availability found');
+      throw new CustomError('No weekly availability found', 404);
+    }
+
+    const availableHours = this.generateHourRange(weeklyAvailability.startTime, weeklyAvailability.endTime);
+
+    // Verificar aluguéis que ocupam horários específicos nesta data
+    const dateString = targetDate.toISOString().split('T')[0];
+    const rents = await productRepository.findRentsByDate(productId, dateString);
+    if (rents.length > 0) { 
+      logger.error("Rents found for the selected date");
+      throw new CustomError("Rents found for the selected date", 409);
+    }
+
+    logger.info('Available hours fetched successfully');
+    return availableHours;
+  }
+
+  private async defineDefaultRangeAvailableDates(options: AvailabilityOptions = {}, product: productAvailabilityInterface): Promise<AvailabilityDate[]> {
     logger.info(`Defining default range of available dates`);
 
     // Definir range de datas (padrão: próximos 30 dias)
