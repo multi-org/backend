@@ -158,6 +158,17 @@ export class UserRepository {
             }
         })
     }
+
+    async resetPassword(userId: string, newPassword: string) {
+        return await prisma.user.update({
+            where: {
+                userId: userId
+            },
+            data: {
+                password: newPassword
+            }
+        });
+     }
 }
 
 

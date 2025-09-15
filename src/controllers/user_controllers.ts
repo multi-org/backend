@@ -330,6 +330,67 @@ class userController {
       }
     }
 
+    async confirmPassword(req: AuthRequest, res: Response) {
+        try {
+            const emailUser = req.email!;
+            const { password } = req.body;
+
+            if(!password) {
+                return res.status(400).json({ message: "Password is required" });
+            }
+
+            const isPasswordConfirmed = await UserService.ConfirmPassword(emailUser, password);
+            if (!isPasswordConfirmed.success) {
+                return res.status(401).json({ message: "Password confirmation failed" });
+            }
+
+            const passwordToken = randomUUID();
+            res.cookie('password_confirmation_token', passwordToken, {
+                httpOnly: true,
+                maxAge: 5 * 60 * 1000, // 5 minutes
+                secure: process.env.NODE_ENV === 'production',
+                sameSite: 'lax',
+                path: '/'
+            })
+
+            return res.status(200).json({ message: "Password confirmed successfully", isPasswordConfirmed });
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
+    async changePasswordController(req: AuthRequest, res: Response) { 
+        try {
+            const emailUser = req.email!;
+            const { newPassword, passwordConfirmation } = req.body;
+
+            if(!newPassword || !passwordConfirmation) {
+                return res.status(400).json({ message: "New password and password confirmation are required" });
+            }
+
+            const { password_confirmation_token } = req.cookies;
+            if (!password_confirmation_token) {
+                return res.status(400).json({ message: "Password confirmation token not found in cookies" });
+            }
+            
+            const isTokenValid = await UserService.changePasswordService(newPassword, passwordConfirmation, emailUser);
+            if (!isTokenValid.success) {
+                return res.status(401).json({ message: "Password change failed" });
+            }
+            
+            res.clearCookie("password_confirmation_token", { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax', path: '/' });
+            return res.status(200).json({ message: "Password changed successfully", isTokenValid });
+        } catch (error: any) {
+            const statusCode = error.status || 500;
+            return res.status(statusCode).json({
+                message: error.message || "Internal Server Error",
+            });
+        }
+    }
+
 
 }
 

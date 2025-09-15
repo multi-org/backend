@@ -19,5 +19,7 @@ userRoutes.get("/all/associationOrLegalRepresentative/request", jwtRequired, che
 userRoutes.post("/associationOrLegalRepresentative/confirmation/:userId/:companyId", jwtRequired, checkCompanyPermission('accept:company_associateOrRepresentativeLegal'), userController.requestsToCompanyConfirmation);
 userRoutes.delete("/associationOrLegalRepresentative/reject/:userId/:companyId", jwtRequired, checkCompanyPermission('reject:company_associate'), userController.requestsToCompanyReject);
 userRoutes.delete("/all/associationOrLegalRepresentative/reject/:companyId", jwtRequired, checkCompanyPermission('reject:company_associate'), userController.deleteAllRequests);
+userRoutes.post("/confirmPassword", jwtRequired, userController.confirmPassword);
+userRoutes.put("/changePassword", jwtRequired, userController.changePasswordController);
 
 export default userRoutes;
