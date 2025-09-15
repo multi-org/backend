@@ -143,6 +143,7 @@ export class UserRepository {
     }
 
     async findUserAssociateToCompany(userId: string, companyId: string) {
+        console.log(userId, companyId)
         return await prisma.companyAssociate.findUnique({
             where: {
                 userId_companyId: { userId: userId, companyId: companyId }
@@ -157,6 +158,17 @@ export class UserRepository {
             }
         })
     }
+
+    async resetPassword(userId: string, newPassword: string) {
+        return await prisma.user.update({
+            where: {
+                userId: userId
+            },
+            data: {
+                password: newPassword
+            }
+        });
+     }
 }
 
 

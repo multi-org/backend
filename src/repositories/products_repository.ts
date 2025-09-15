@@ -37,7 +37,7 @@ export class ProductsRepository {
     }
 
     async createProduct(productData: ProductCreateInput, userId: string, ownerId: string) { 
-        const { title, description, type, category, unity, chargingModel, weeklyAvailability, dailyPrice, hourlyPrice } = productData;
+        const { title, description, type, category, unity, chargingModel, weeklyAvailability, dailyPrice, hourlyPrice, discountPercentage } = productData;
 
         const result = await prisma.$transaction(async (tx) => {
             
@@ -53,6 +53,7 @@ export class ProductsRepository {
                     hourlyPrice,
                     dailyPrice,
                     createdBy: userId,
+                    discountPercentage: discountPercentage
                 },
             });
 
@@ -81,7 +82,7 @@ export class ProductsRepository {
                     });
                     break;
                 
-                case "EQUIPAMENT":
+                case "EQUIPMENT":
                     const { brand, model, specifications, stock } = productData.equipmentDetails;
                     specificProduct = await tx.equipamentProduct.create({
                         data: {
@@ -154,43 +155,54 @@ export class ProductsRepository {
         return product;
     }
 
-    async findProductsByOwnerId(ownerId: string, page: number = 1, limit: number = 10) {
-        const skip = (page - 1) * limit;
+    async findAllProductsToSystem() {
+        return  await prisma.product.findMany({
+            where: { status: "ACTIVE" },
+            include: {
+                spaceProduct: true,
+                servicesProduct: true,
+                equipamentProduct: true,
+                ProductWeeklyAvailability: true
+            },
+            orderBy: {
+                createdAt: "desc"
+            }
+        });
+    }
 
-        const [products, total] = await Promise.all([
-            prisma.product.findMany({
-                where: {
-                    ownerId,
-                    status: "ACTIVE"
-                },
-                include: {
+    async findProductsByOwnerId(ownerId: string) {
+        return await prisma.product.findMany({
+            where: {
+                ownerId,
+                status: "ACTIVE"
+            },
+            include: {
                     spaceProduct: true,
                     servicesProduct: true,
                     equipamentProduct: true,
                 },
-                skip,
-                take: limit,
-                orderBy: {
-                    createdAt: "desc"
-                }
-            }),
-            prisma.product.count({
-                where: {
-                    ownerId,
-                    status: "ACTIVE"
-                }
-            })
-        ])
-
-        return {
-            products,
-            pagination: {
-                page,
-                limit,
-                total,
-                totalPages: Math.ceil(total / limit)
+            orderBy: {
+                createdAt: "desc"
             }
-        };
+        });
+    }
+
+    async findProductWeeklyAvailability(productId: string) {
+        return await prisma.productWeeklyAvailability.findMany({
+            where: { productId }
+        });
+    }
+
+
+    async specificAvailability(productId: string, startDate: Date, endDate: Date) {
+        return await prisma.productAvailability.findFirst({
+            where: {
+                productId,
+                startDate: { lte: startDate },
+                endDate: { gte: endDate },
+                isAvailable: false
+            }
+        });
     }
 
     async updateProduct(productId: string, updateData: Partial<ProductCreateInput>) {
@@ -243,6 +255,12 @@ export class ProductsRepository {
         });
 
         return deleteProduct;
+    }
+
+    async findUniqueEquipamentDetails(productId: string) {
+        return await prisma.equipamentProduct.findUnique({
+            where: { productId }
+        });
     }
 
     async getProductAvailability(productId: string, startDate: Date, endDate: Date) {
@@ -320,6 +338,55 @@ export class ProductsRepository {
                 productAvailability: true,
             }
         })
+    }
+
+    async availableDatesProoduct(productId: string) {
+        return await prisma.product.findUnique({
+            where: { id: productId },
+            include: {
+                ProductWeeklyAvailability: true,
+                productAvailability: true,
+                rents: {
+                    where: {
+                        status: { in: ['PENDING', 'CONFIRMED'] }
+                    },
+                    select: {
+                        startDate: true,
+                        endDate: true,
+                        status: true
+                    }
+                }
+            }
+        });
+    }
+
+    async getAvailableHours(productId: string, date: string) {
+        const targetDate = new Date(date);
+        const dayOfWeek = targetDate.getDay();
+
+        return  await prisma.productWeeklyAvailability.findFirst({
+            where: {
+                productId,
+                dayOfWeek
+            }
+        });
+    }
+
+    async findRentsByDate(productId: string, dateString: string) { 
+        return await prisma.rent.findMany({
+        where: {
+          productId,
+          status: {
+            in: ['PENDING', 'CONFIRMED']
+          },
+          startDate: {
+            lte: new Date(dateString + 'T23:59:59')
+          },
+          endDate: {
+            gte: new Date(dateString + 'T00:00:00')
+          }
+        }
+      });
     }
 }
 

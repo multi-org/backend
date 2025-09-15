@@ -46,20 +46,32 @@ class ProductsServices {
         return created;
     }
 
-    async getProductsByOwner(ownerId: string, page: number = 1, limit: number = 10) {
-        logger.info("Fetching products by owner", { ownerId, page, limit });
+    async getProductsByOwner(ownerId: string) {
+        logger.info("Fetching products by owner", { ownerId });
 
-        if (page < 1) page = 1;
-        if (limit < 1 || limit > 100) limit = 10;
-
-        const result = await productRepository.findProductsByOwnerId(ownerId, page, limit);
-
-        const productsWithUserData = await this.productWithUserDataAndCompany(result.products[0]);
+        const result = await productRepository.findProductsByOwnerId(ownerId);
+        const productsWithUserData = await Promise.all(
+            result.map(product => this.productWithUserAndCompanyData(product))
+        );
 
         logger.info("Products fetched successfully");
         return {
             ...result,
             products: productsWithUserData
+        };
+    }
+
+    async getAllProducts() {
+        logger.info("Fetching all products to System");
+
+        const result = await productRepository.findAllProductsToSystem();
+        const productsWithUserData = await Promise.all(
+            result.map(product => this.productWithUserAndCompanyData(product))
+        );
+
+        logger.info("Products fetched successfully");
+        return {
+            products: productsWithUserData,
         };
     }
 
@@ -73,14 +85,32 @@ class ProductsServices {
             throw new CustomError("Produto não encontrado", 404);
         }
 
+        else if (product.status === 'DELETED') {
+            logger.error("Product is deleted", { productId });
+            throw new CustomError("Produto foi excluído", 410);
+        }
+
+        const productWithUserData = await this.productWithUserAndCompanyData(product);
+
+        return productWithUserData;
+    }
+
+    async findProductById(productId: string) {
+        logger.info("Fetching product by ID", productId );
+
+        const product = await productRepository.findProductById(productId);
+        
+        if (!product) {
+            logger.error("Product not found", { productId });
+            throw new CustomError("Produto não encontrado", 404);
+        }
+
         if (product.status === 'DELETED') {
             logger.error("Product is deleted", { productId });
             throw new CustomError("Produto foi excluído", 410);
         }
 
-        const productWithUserData = await this.productWithUserDataAndCompany(product);
-
-        return productWithUserData;
+        return product;
     }
 
     async updateProduct(productId: string, updateData: Partial<ProductCreateInput>, imagesFiles?: Express.Multer.File[]) {
@@ -140,6 +170,21 @@ class ProductsServices {
         await this.getProductById(productId);
 
         const availability = await productRepository.getProductAvailability(productId, starDate, endDate);
+        if (!availability) {
+            logger.error("No availability found for this product", { productId });
+            throw new CustomError("Nenhuma disponibilidade encontrada para este produto", 404);
+        }
+
+        logger.info("Product availability fetched successfully", { productId });
+        return availability;
+    }
+
+    async findUniqueProductAvalability(productId: string, starDate: Date, endDate: Date) {
+        logger.info("Fetching product availability");
+
+        await this.getProductById(productId);
+
+        const availability = await productRepository.specificAvailability(productId, starDate, endDate);
         if (!availability) {
             logger.error("No availability found for this product", { productId });
             throw new CustomError("Nenhuma disponibilidade encontrada para este produto", 404);
@@ -215,7 +260,7 @@ class ProductsServices {
                     throw new CustomError("Service duration must be greater than zero", 400);
                 }
                 break;
-            case "EQUIPAMENT":
+            case "EQUIPMENT":
                 if (!productData.equipmentDetails) {
                     throw new CustomError("Equipment details are required for EQUIPAMENT type products", 400);
                 }
@@ -255,7 +300,7 @@ class ProductsServices {
         }
     }
 
-    private async productWithUserDataAndCompany(product: ProductWithRelations) {
+    private async productWithUserAndCompanyData(product: ProductWithRelations) {
         const productWtihUserData = await userRepository.findUserById(product.createdBy);
         const company = await enterpriService.findEnterpriseById(product.ownerId);
         const weeklyAvailabilityMapped = product.ProductWeeklyAvailability 
@@ -269,15 +314,20 @@ class ProductsServices {
             owner: company ? {
                 name: company.legalName,
                 ownerId: company.id,
+                phoneNumber: company.phone,
+                email: company.email,
                 ownerType: company.ownerType,
                 cnpj: company.cnpj,
-                description: company.description
+                description: company.description,
+                address: company.Address
             } : {
                 name: "⚠️ EMPRESA REMOVIDA/INEXISTENTE",
                 ownerId: product.ownerId,
                 cnpj: "❌ Possível atividade de BOT detectada",
                 status: "SUSPICIOUS_REQUEST",
-                alert: "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema"
+                alert: "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema",
+                email: "❌ Possível atividade de BOT detectada",
+                phoneNumber: "❌ Possível atividade de BOT detectada",
             },
             createdBy: productWtihUserData ? {
                 name: productWtihUserData.name,
@@ -289,7 +339,7 @@ class ProductsServices {
                 email: "❌ Possível atividade de BOT detectada",
                 status: "SUSPICIOUS_REQUEST",
                 alert: "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema"
-            }
+            },
         };
     }
 
@@ -319,5 +369,6 @@ class ProductsServices {
         
     }
 }
+
 
 export default new ProductsServices();

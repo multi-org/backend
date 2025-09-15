@@ -385,6 +385,56 @@ export class UserServices {
     } as Record<string, any>;
   }
 
+  async ConfirmPassword(email: string, password: string) {
+    logger.info("Confirming user password");
+
+    const user = await userRepository.findUserByEmail(email);
+    if (!user) {
+      logger.warn(`User not found`);
+      throw new CustomError("User not found", 404);
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      logger.warn("Invalid password");
+      throw new CustomError("Invalid password", 422);
+    }
+
+    logger.info("Password confirmed successfully");
+    return { success: true };
+  }
+
+  async changePasswordService(newPassword: string, confirmNewPassword: string, email: string) {
+    logger.info("Changing user password");
+
+    if (newPassword !== confirmNewPassword) {
+      logger.warn("Passwords do not match");
+      throw new CustomError("Passwords do not match", 400);
+    }
+
+    const user = await userRepository.findUserByEmail(email);
+    if (!user) {
+      logger.warn(`User not found`);
+      throw new CustomError("User not found", 404);
+    }
+
+    const passwordsAreSame = await bcrypt.compare(newPassword, user.password);
+    if (passwordsAreSame) {
+      logger.warn("New password must be different from the old password");
+      throw new CustomError("New password must be different from the old password", 400);
+    }
+    
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const updatePassword = await userRepository.resetPassword(user.userId, hashedPassword);
+    if (!updatePassword) {
+      logger.error("Failed to update user password");
+      throw new CustomError("Failed to update user password", 500);
+    }
+    
+    logger.info("Password changed successfully");
+    return {success: true};
+  }
+
   async requestsToCompanyReject(userId: string, companyId: string, typeRequest: string) {
     logger.info("Rejecting association with company");
 

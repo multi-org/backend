@@ -10,8 +10,12 @@
     "skipLibCheck": true,
     "outDir": "./dist",
     "paths": {
-      "@app/*": ["./src/*"],
+      "@app/*": ["./src/*"]
     }
   },
-  "include": ["src", "prisma"]
+  "include": [
+    "src",
+    "prisma",
+    "../implementacao_completa/routes/availability_routes.ts"
+  ]
 }

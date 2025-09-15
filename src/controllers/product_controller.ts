@@ -8,7 +8,6 @@ import { Response, Request } from "express";
 import productServices from "@app/services/products_services";
 
 class ProdutoController {
-
   static async createProduct(req: AuthRequest, res: Response) {
     try {
       const parseBody = {
@@ -22,10 +21,27 @@ class ProdutoController {
           capacity: req.body.capacity ? parseInt(req.body.capacity) : undefined,
           area: req.body.area ? parseFloat(req.body.area) : undefined,
         },
+        serviceDetails: {
+          durationMinutes: req.body.durationMinutes ? parseInt(req.body.durationMinutes) : undefined,
+          requirements: req.body.requirements ? String(req.body.requirements) : null
+        },
+        equipmentDetails: {
+          stock: req.body.stock ? parseInt(req.body.stock) : undefined,
+          brand: req.body.brand ? String(req.body.brand) : null,
+          model: req.body.model ? String(req.body.model) : null,
+          specifications: req.body.specifications ? String(req.body.specifications) : null
+        },
+        discountPercentage: req.body.discountPercentage ? parseFloat(req.body.discountPercentage) : 10,
       };
+
       delete parseBody.capacity;
       delete parseBody.area;
       delete parseBody.images;
+      delete parseBody.durationMinutes;
+      delete parseBody.stock;
+      delete parseBody.brand;
+      delete parseBody.model;
+      delete parseBody.specifications;
 
       const validationResult = validateProductCreation(parseBody);
       if (!validationResult.success) {
@@ -41,7 +57,7 @@ class ProdutoController {
       const newProduct = await productServices.createProduct(
         productData,
         ownerId,
-        userId, 
+        userId,
         imagesFiles
       );
 
@@ -58,11 +74,34 @@ class ProdutoController {
     }
   }
 
-  static async getProducts(req: AuthRequest, res: Response) {
+  static async getAlProducts(req: AuthRequest, res: Response) {
+    try {
+      const result = await productServices.getAllProducts();
+      return res
+        .status(200)
+        .json({
+          success: true,
+          message: "Produtos listados com sucesso",
+          data: result.products,
+          statistics: {
+            totalProducts: result.products.length,
+            spaceCount: result.products.filter(p => p.type === 'SPACE').length,
+            serviceCount: result.products.filter(p => p.type === 'SERVICE').length,
+            equipmentCount: result.products.filter(p => p.type === 'EQUIPMENT').length,
+          },
+        });
+    } catch (error: any) {
+      const statusCode = error.status || 500;
+      return res.status(statusCode).json({
+        success: false,
+        message: error.message || "Erro interno do servidor",
+      });
+    }
+  }
+
+  static async getProductsOwner(req: AuthRequest, res: Response) {
     try {
       const { ownerId } = req.params;
-      const page = parseInt(req.query.page as string) || 1;
-      const limit = parseInt(req.query.limit as string) || 10;
 
       if (!ownerId) {
         return res.status(400).json({
@@ -71,17 +110,15 @@ class ProdutoController {
         });
       }
 
-      const result = await productServices.getProductsByOwner(
-        ownerId,
-        page,
-        limit
-      );
+      const result = await productServices.getProductsByOwner(ownerId);
 
       return res.status(200).json({
         success: true,
         message: "Produtos listados com sucesso",
         data: result.products,
-        pagination: result.pagination,
+        statistics: {
+          totalProducts: result.length,
+        },
       });
     } catch (error: any) {
       const statusCode = error.status || 500;
@@ -92,7 +129,7 @@ class ProdutoController {
     }
   }
 
-  static async getProductById(req: AuthRequest, res: Response) { 
+  static async getProductById(req: AuthRequest, res: Response) {
     try {
       const { productId } = req.params;
 
@@ -108,9 +145,8 @@ class ProdutoController {
       return res.status(200).json({
         success: true,
         message: "Produto encontrado com sucesso",
-        data: product
+        data: product,
       });
-
     } catch (error: any) {
       const statusCode = error.status || 500;
       return res.status(statusCode).json({
@@ -123,14 +159,15 @@ class ProdutoController {
   static async getProductsMultipleFields(req: AuthRequest, res: Response) {
     try {
       const { search } = req.query;
-      const products = await productServices.searchProductsMultipleFields(search as string);
+      const products = await productServices.searchProductsMultipleFields(
+        search as string
+      );
 
       return res.status(200).json({
         success: true,
         message: "Produtos encontrados com sucesso",
         data: products,
       });
-
     } catch (error: any) {
       const statusCode = error.status || 500;
       return res.status(statusCode).json({

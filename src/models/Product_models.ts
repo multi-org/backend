@@ -37,7 +37,7 @@ const weeklyAvailabilitySchema = z.object({
 const ProductBaseSchema = z.object({
   title: z.string().min(1, "Título é obrigatório").max(255, "Título deve ter no máximo 255 caracteres"),
   description: z.string().min(1, "Descrição é obrigatória").max(300, "Descrição deve ter no máximo 300 caracteres"),
-  type: z.enum(["SPACE", "SERVICE", "EQUIPAMENT"], {
+  type: z.enum(["SPACE", "SERVICE", "EQUIPMENT"], {
     errorMap: () => ({ message: "Tipo deve ser SPACE, SERVICE ou EQUIPAMENT" })
   }),
   category: z.string().min(1, "Categoria é obrigatória").max(500, "Categoria deve ter no máximo 500 caracteres"),
@@ -46,6 +46,7 @@ const ProductBaseSchema = z.object({
 
   dailyPrice: z.number().min(0, "Preço da diária deve ser positivo").optional(),
   hourlyPrice: z.number().min(0, "Preço da hora deve ser positivo").optional(),
+  discountPercentage: z.number().min(1, "Porcentagem de desconto deve ser maior que 1").max(100, "O valor máximo de desconto não deve ser maior que 100%"),
 
   imagesUrls: z.array(z.string().url("URL de imagem inválida")).max(5, "Máximo de 5 URLs de imagens permitidas").optional(),
 
@@ -76,13 +77,14 @@ export type WeeklyAvailability = z.infer<typeof weeklyAvailabilitySchema>;
 export type ProductCreateInput = z.infer<typeof ProductBaseSchema> & (
   { type: "SPACE"; spaceDetails: z.infer<typeof spaceProductSchema> } |
   { type: "SERVICE"; serviceDetails: z.infer<typeof serviceProductSchema> } |
-  { type: "EQUIPAMENT"; equipmentDetails: z.infer<typeof equipmentProductSchema> }
+  { type: "EQUIPMENT"; equipmentDetails: z.infer<typeof equipmentProductSchema> }
 );
 
 // Função de validação melhorada
 export function validateProductCreation(data: any):
   { success: true; data: ProductCreateInput } |
   { success: false; error: z.ZodError } {
+  
   
   // Validar dados base
   const baseResult = ProductBaseSchema.safeParse(data);
@@ -125,7 +127,7 @@ export function validateProductCreation(data: any):
       }
       break;
 
-    case "EQUIPAMENT":
+    case "EQUIPMENT":
       if (!data.equipmentDetails) {
         return {
           success: false,
@@ -198,7 +200,8 @@ export interface ProductWithRelations {
     chargingModel: string;
     unity: string | null;
     dailyPrice: Decimal | null;
-    hourlyPrice: Decimal | null;
+  hourlyPrice: Decimal | null;
+  discountPercentage: Decimal,
     ownerId: string;
     createdBy: string;
     createdAt: Date;
@@ -232,4 +235,48 @@ export interface ProductWithRelations {
     stock: number;
     productId: string;
   } | null;
+}
+
+export interface productAvailabilityInterface{
+
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  status: string;
+  category: string;
+  chargingModel: string;
+  unity: string | null;
+  dailyPrice: Decimal | null;
+  hourlyPrice: Decimal | null;
+  discountPercentage: Decimal,
+  ownerId: string;
+  createdBy: string;
+  createdAt: Date;
+  updatedAt: Date;
+
+  ProductWeeklyAvailability: {
+    dayOfWeek: number;
+    isAvailable: boolean;
+    startTime: string;
+    endTime: string;
+    productId: string;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+  productAvailability: {
+    id: string;
+    productId: string;
+    startDate: Date;
+    endDate: Date;
+    isAvailable: boolean;
+    priceOverride: Decimal | null;
+    createdAt: Date;
+    updatedAt: Date;
+  }[];
+  rents: {
+    startDate: Date;
+    endDate: Date;
+    status: string;
+  }[];
 }

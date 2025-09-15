@@ -8,6 +8,7 @@ import { dataSave, delData, getData, getKeysByPrefix } from '@app/models/redis_m
 import userRepository from '@app/repositories/user_repository';
 import enterpriseRepository from "@app/repositories/enterprise_repository";
 import useServices from "./user_services";
+import { Console } from "console";
 
 class EnterpriseServices {
     async createEnterprise(enterpriseData: EnterpriseDTOSWithAddress) {
@@ -30,10 +31,10 @@ class EnterpriseServices {
             throw new CustomError("Email already registered", 400);
         }
 
-        const existingEnterpriseWithCnpj = await enterpriseRepository.findEnterpriseByCnpj(enterpriseData.cnpj);
+        const existingEnterpriseWithCnpj = await enterpriseRepository.findEnterpriseByCnpjAnbPopularName(enterpriseData.cnpj, enterpriseData.popularName);
         if (existingEnterpriseWithCnpj) {
-            logger.warn(`Enterprise with CNPJ ${enterpriseData.cnpj} already exists`);
-            throw new CustomError("CNPJ already registered", 400);
+            logger.warn(`Enterprise with CNPJ ${enterpriseData.cnpj} and popular name ${enterpriseData.popularName} already exists`);
+            throw new CustomError("CNPJ and popular name already registered", 400);
         }
 
         const companyData = await extractCompanyData(enterpriseData);
@@ -42,8 +43,8 @@ class EnterpriseServices {
         const newEnterprise = await enterpriseRepository.createEnterprise(companyData, addressData);
         if (!newEnterprise) {
             logger.error("Failed to create enterprise");
-                throw new CustomError("Failed to create enterprise", 500);
-            }
+            throw new CustomError("Failed to create enterprise", 500);
+        }
 
         return { message: "Successfully created company", enterpriseName: newEnterprise.popularName };
     }
@@ -171,10 +172,10 @@ class EnterpriseServices {
             throw new CustomError("Email already registered", 400);
         }
 
-        const existingEnterpriseWithCnpj = await enterpriseRepository.findEnterpriseByCnpj(enterpriseData.cnpj);
-        if (existingEnterpriseWithCnpj) {
-            logger.warn(`Enterprise with CNPJ ${enterpriseData.cnpj} already exists`);
-            throw new CustomError("CNPJ already registered", 400);
+        const existingEnterpriseWithCnpjAndPopularName = await enterpriseRepository.findEnterpriseByCnpjAnbPopularName(enterpriseData.cnpj, enterpriseData.popularName);
+        if (existingEnterpriseWithCnpjAndPopularName) {
+            logger.warn(`Enterprise with CNPJ ${enterpriseData.cnpj} and popular name ${enterpriseData.popularName} already exists`);
+            throw new CustomError("CNPJ and popular name already registered", 400);
         }
 
         const existingEnterpriseWithPhone = await enterpriseRepository.findEnterpriseByPhone(enterpriseData.phone);
