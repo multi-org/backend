@@ -99,6 +99,7 @@ model User {
   Payment Payment[]
   userSystemRoles userSystemRole[]
   UserCompanyRole UserCompanyRole[]
+  FrequentlyAskedQuestion FrequentlyAskedQuestion[]
 
   @@map("users")
   @@schema("multi")
@@ -374,5 +375,18 @@ model ProductAvailability {
   updatedAt DateTime @updatedAt
 
   @@map("product_availabilities")
+  @@schema("multi")
+}
+
+model FrequentlyAskedQuestion {
+  id       String  @id @default(uuid()) @db.Uuid
+  userWhoAsked String @db.Uuid
+  user User @relation(fields: [userWhoAsked], references: [userId], onDelete: Cascade, onUpdate: Cascade)
+  question String  @db.VarChar(1000)
+  answer   String?  @db.VarChar(2000)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("frequently_asked_questions")
   @@schema("multi")
 }

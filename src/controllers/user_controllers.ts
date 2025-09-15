@@ -4,7 +4,6 @@ import {createUserZode, emailZode, UserAdressZode, userCpfZode } from '@app/mode
 import UserService from '@app/services/user_services';
 import { dataSave, delData, getData } from '@app/models/redis_models';
 import { randomUUID } from 'crypto';
-import uploadService from "@app/services/upload_services";
 import Queue from "@app/jobs/lib/queue";
 
 class userController {

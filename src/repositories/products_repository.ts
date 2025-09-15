@@ -1,6 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 import { ProductCreateInput, WeeklyAvailability } from "@app/models/Product_models";
-import { P } from "pino";
 
 const prisma = new PrismaClient();
 
@@ -38,7 +37,7 @@ export class ProductsRepository {
     }
 
     async createProduct(productData: ProductCreateInput, userId: string, ownerId: string) { 
-        const { title, description, type, category, unity, chargingModel, weeklyAvailability, dailyPrice, hourlyPrice } = productData;
+        const { title, description, type, category, unity, chargingModel, weeklyAvailability, dailyPrice, hourlyPrice, discountPercentage } = productData;
 
         const result = await prisma.$transaction(async (tx) => {
             
@@ -54,6 +53,7 @@ export class ProductsRepository {
                     hourlyPrice,
                     dailyPrice,
                     createdBy: userId,
+                    discountPercentage: discountPercentage
                 },
             });
 

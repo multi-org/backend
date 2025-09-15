@@ -314,6 +314,8 @@ class ProductsServices {
             owner: company ? {
                 name: company.legalName,
                 ownerId: company.id,
+                phoneNumber: company.phone,
+                email: company.email,
                 ownerType: company.ownerType,
                 cnpj: company.cnpj,
                 description: company.description,
@@ -323,7 +325,9 @@ class ProductsServices {
                 ownerId: product.ownerId,
                 cnpj: "❌ Possível atividade de BOT detectada",
                 status: "SUSPICIOUS_REQUEST",
-                alert: "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema"
+                alert: "Este pedido pode ter sido criado por um bot ou usuário que foi removido do sistema",
+                email: "❌ Possível atividade de BOT detectada",
+                phoneNumber: "❌ Possível atividade de BOT detectada",
             },
             createdBy: productWtihUserData ? {
                 name: productWtihUserData.name,

@@ -30,7 +30,8 @@ class ProdutoController {
           brand: req.body.brand ? String(req.body.brand) : null,
           model: req.body.model ? String(req.body.model) : null,
           specifications: req.body.specifications ? String(req.body.specifications) : null
-        }
+        },
+        discountPercentage: req.body.discountPercentage ? parseFloat(req.body.discountPercentage) : 10,
       };
 
       delete parseBody.capacity;
