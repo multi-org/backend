@@ -4,7 +4,8 @@ import {createUserZode, emailZode, UserAdressZode, userCpfZode } from '@app/mode
 import UserService from '@app/services/user_services';
 import { dataSave, delData, getData } from '@app/models/redis_models';
 import { randomUUID } from 'crypto';
-
+import uploadService from "@app/services/upload_services";
+import Queue from "@app/jobs/lib/queue";
 
 class userController {
 
@@ -390,6 +391,25 @@ class userController {
             });
         }
     }
+
+    async uploadUserProfileImage(req: AuthRequest, res: Response) {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
+
+    try {
+      await Queue.add("uploadUserProfileImage", {
+        localFilePath: req.file.path,
+        userId: req.userId!,
+      }, { priority: 3 });
+
+      return res.status(202).json({ message: "Upload da imagem de perfil agendado com sucesso." });
+    } catch (error: any) {
+      return res
+        .status(500)
+        .json({ message: error.message || "Internal Server Error" });
+    }
+  }
 
 
 }
