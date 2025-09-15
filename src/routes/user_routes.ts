@@ -3,6 +3,7 @@ import userController from "@app/controllers/user_controllers";
 import { jwtRequired } from '@app/middlewares/global_middleware';
 import { uploadDocuments } from '@app/middlewares/upload_middlewares';
 import {checkCompanyPermission, checkPermission} from '@app/middlewares/checkPermissions_middlewares';
+import { uploadImages } from "@app/middlewares/upload_middlewares";
 
 const userRoutes = Router();
 
@@ -21,5 +22,8 @@ userRoutes.delete("/associationOrLegalRepresentative/reject/:userId/:companyId",
 userRoutes.delete("/all/associationOrLegalRepresentative/reject/:companyId", jwtRequired, checkCompanyPermission('reject:company_associate'), userController.deleteAllRequests);
 userRoutes.post("/confirmPassword", jwtRequired, userController.confirmPassword);
 userRoutes.put("/changePassword", jwtRequired, userController.changePasswordController);
+
+userRoutes.post("/changeProfileImage", jwtRequired, uploadImages.single("image"), userController.uploadUserProfileImage);
+
 
 export default userRoutes;
