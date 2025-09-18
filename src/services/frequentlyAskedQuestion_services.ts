@@ -24,7 +24,11 @@ class FrequentlyAskedQuestionServices {
         }
 
         logger.info("Frequently asked question created successfully");
-        return {success: true};
+        return {
+            Id: createdQuestion.id,
+            question: createdQuestion.question,
+            answer: createdQuestion.answer
+        };
     }
 
     async getAllQuestions() {

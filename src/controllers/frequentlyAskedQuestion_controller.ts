@@ -10,7 +10,7 @@ class FrequentlyAskedQuestionController {
 
         try {
             const result = await questionFrequentilyService.createQuestion(question, userWhoAsked);
-            return res.status(201).json(result);
+            return res.status(201).json({success: true, data: result});
         } catch (error) {
             if (error instanceof Error && 'statusCode' in error) {
                 return res.status((error as any).statusCode).json({ error: error.message });
