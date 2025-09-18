@@ -133,3 +133,5 @@ dist
 /temp_uploads/
 
 src/generated
+
+__tests__
