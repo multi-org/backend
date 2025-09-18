@@ -16,6 +16,10 @@ const corsOptions = {
   optionsSuccessStatus: 204,
 };
 
+app.get("/healthz", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
 app.use(cors(corsOptions));
 
 connectDatabase()
