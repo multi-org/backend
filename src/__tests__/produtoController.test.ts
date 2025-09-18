@@ -1,7 +1,6 @@
 import request from "supertest";
 import express, { Application } from "express";
 import ProdutoController from "../controllers/product_controller";
-import produto from "../models/Product_models";
 
 const app: Application = express();
 app.use(express.json());
