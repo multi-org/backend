@@ -35,4 +35,4 @@ COPY --from=builder /usr/src/app/prisma ./prisma
 EXPOSE 8080
 
 # Roda migrations antes de iniciar o servidor
-CMD npx prisma migrate deploy && node dist/server.js
+CMD npx prisma migrate deploy && node dist/app.js

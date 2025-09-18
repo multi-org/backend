@@ -7,7 +7,7 @@
     "start:dev": "tsx server.ts",
     "start:watch": "tsx watch server.ts",
     "dist": "tsup src",
-    "start:dist": "npm run dist && node dist/server.js",
+    "start:dist": "npm run dist && node dist/app.js",
     "lint": "eslint",
     "test": "jest"
   },
