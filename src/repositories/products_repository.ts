@@ -388,6 +388,33 @@ export class ProductsRepository {
         }
       });
     }
+
+    async findProductCompany(productId: string) { 
+        const product = await prisma.product.findFirst({
+            where: { ownerId: productId }
+        });
+
+        const company = await prisma.company.findFirst({
+            where: { id: product?.ownerId },
+            select: {
+                id: true,
+                legalName: true,
+                popularName: true,
+                phone: true,
+                email: true,
+                associateDiscountRate: true,
+            }
+        });
+
+        const companyAddress = await prisma.address.findFirst({
+            where: {companyId: company?.id}
+        })
+
+        return {
+            ...company,
+            address: companyAddress
+        };
+    }
 }
 
 export default new ProductsRepository();

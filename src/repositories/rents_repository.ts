@@ -34,7 +34,7 @@ class Rents {
     }
 
     async createRental(data: any) {
-        console.log(data)
+        
         return await prisma.rent.create({
             data, 
             include: {
@@ -49,6 +49,27 @@ class Rents {
                         dailyPrice: true,
                         hourlyPrice: true,
                         chargingModel: true,
+                        spaceProduct: {
+                            select: {
+                                capacity: true,
+                                area: true,
+                            }
+                        },
+                        equipamentProduct: {
+                            select: {
+                                brand: true,
+                                model: true,
+                                specifications: true,
+                                stock: true,
+                            }
+                        },
+                        servicesProduct: {
+                            select: {
+                                durationMinutes: true,
+                                requirements: true,
+                            }
+                        },
+                        discountPercentage: true,
                         
                     }
                 },
@@ -56,14 +77,30 @@ class Rents {
                     select: {
                         userId: true,
                         name: true,
-                        email: true
+                        email: true,
+                        phoneNumber: true,
                     }
                 }
             }
         })
     }
 
-    
+    async findRentalsByUserId(userId: string, status?: string) {
+
+        const rentals = await prisma.rent.findMany({
+            where: {userId, status: status as RentStatus | undefined},
+            include: {
+                product: true,
+                payment: true
+
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
+        });
+
+        return rentals;
+    }      
     
 }
 
