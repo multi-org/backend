@@ -85,10 +85,10 @@ class Rents {
         })
     }
 
-    async findRentalsByUserId(userId: string, status?: string) {
+    async findRentalsByUserId(userId: string) {
 
         const rentals = await prisma.rent.findMany({
-            where: {userId, status: status as RentStatus | undefined},
+            where: {userId},
             include: {
                 product: true,
                 payment: true
@@ -100,7 +100,20 @@ class Rents {
         });
 
         return rentals;
-    }      
+    }     
+    
+    async findRentalById(rentId: string) {
+        return await prisma.rent.findUnique({
+            where: { id: rentId },
+        });
+    }
+
+    async updateRentalStatus(rentId: string, status: RentStatus) {
+        return await prisma.rent.update({
+            where: { id: rentId },
+            data: { status },
+        });
+    }
     
 }
 

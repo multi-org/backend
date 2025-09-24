@@ -1,10 +1,11 @@
-import {chargingModel, RentalCreateInput} from '@app/models/Rental_models'
+import {chargingModel, RentalCreateInput, rentStatus} from '@app/models/Rental_models'
 import RentsRepository from '../repositories/rents_repository';
 import productRepository from '@app/repositories/products_repository';
 import productServices from './products_services';
 import { logger, CustomError } from "@app/utils/logger";
 import userRepository from '@app/repositories/user_repository';
-import { compare } from 'bcrypt';
+import Queue from "@app/jobs/lib/queue";
+
 
 class RentalService {
 
@@ -99,17 +100,17 @@ class RentalService {
         };
     }
 
-    async getUserRentals(userId: string, status?: string)
+    async getUserRentals(userId: string)
     {
-        logger.info(`Fetching rentals for userId: ${userId} with status: ${status || 'any'}`);
+        logger.info(`Fetching rentals for userId: ${userId}`);
 
-        const rentals = await RentsRepository.findRentalsByUserId(userId, status);
+        const rentals = await RentsRepository.findRentalsByUserId(userId);
         if (!rentals) {
-            logger.error(`No rentals found for userId: ${userId} with status: ${status || 'any'}`);
+            logger.error(`No rentals found for userId: ${userId}`);
             throw new CustomError("Nenhum aluguel encontrado", 404);
         }
 
-        logger.info(`Found ${rentals.length} rentals for userId: ${userId} with status: ${status || 'any'}`);
+        logger.info(`Found ${rentals.length} rentals for userId: ${userId}`);
 
         return {
             rentals: await Promise.all(rentals.map(async rental => {
@@ -148,6 +149,51 @@ class RentalService {
                 
         };
 
+    }
+
+    async confirmRental(rentalId: string, response: rentStatus) { 
+        logger.info(`Confirming rental with rentalId: ${rentalId}`);
+
+        const rental = await RentsRepository.findRentalById(rentalId);
+        if (!rental) {
+            logger.error(`Rental not found for rentalId: ${rentalId}`);
+            throw new CustomError("Aluguel não encontrado", 404);
+        }
+
+        const user = await userRepository.findUserById(rental.userId);
+        if (!user) {
+            logger.error(`User not found for userId: ${rental.userId}`);
+            throw new CustomError("Usuário não encontrado", 404);
+        }
+
+        const product = await productRepository.findProductById(rental.productId);
+        if (!product) {
+            logger.error(`Product not found for productId: ${rental.productId}`);
+            throw new CustomError("Produto não encontrado", 404);
+        }
+
+        if (rental.status !== 'PENDING') {
+            logger.error(`Rental with rentalId: ${rentalId} is not in a confirmable state`);
+            throw new CustomError("Aluguel não está em um estado que pode ser confirmado", 400);
+        }
+
+        const updatedRental = await RentsRepository.updateRentalStatus(rentalId, response);
+        logger.info(`Rental with rentalId: ${rentalId} confirmed successfully`);
+
+        await Queue.add('confirmableRental', {
+            email: user.email,
+            rentalName: rental.activityTitle,
+            productTitle: product.title,
+            startDate: rental.startDate,
+            endDate: rental.endDate,
+            response: updatedRental.status,
+            userName: user.name
+        }, { priority: 1 });
+
+        return {
+            id: updatedRental.id,
+            status: updatedRental.status,
+        };
     }
     
     async checkProductAvailability(productId: string, startDate: Date, endDate: Date) {

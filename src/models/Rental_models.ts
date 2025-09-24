@@ -238,3 +238,10 @@ export enum chargingModel{
   POR_HORA = "POR_HORA",
   AMBOS = "AMBOS"
 }
+
+export enum rentStatus{
+  PENDING = "PENDING",
+  CONFIRMED = "CONFIRMED",
+  CANCELLED = "CANCELLED",
+  COMPLETED = "COMPLETED"
+}

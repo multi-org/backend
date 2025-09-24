@@ -1,6 +1,8 @@
 import { transporter } from '@app/utils/emailConfig';
 import codeHtml from '@app/templates/code_template';
 import inviteTemplate from '@app/templates/inviteManagerTemplate';
+import rentalTemplates from '@app/templates/message_rental_templates';
+
 import { logger, CustomError } from '@app/utils/logger';
 
 const mailOptionsCode = (email: string, code: string) => {  
@@ -18,6 +20,14 @@ const mailOptionsCompany = (email: string, companyName: string, invitedBy: strin
 
     return {to: email, subject, text, html};
 };
+
+const mailOptionsRental = (email: string, reponseAdmin: string, productTitle: string, startDate: Date, endDate: Date, userName: string, companyName: string) => {
+    const subject = `Confirmação de Aluguel: ${productTitle}`;
+    const text = `Olá, recebemos sua solicitação de aluguel para o produto ${productTitle} do dia ${startDate.toLocaleDateString()} ao dia ${endDate.toLocaleDateString()}.`;
+    const html = rentalTemplates(userName, companyName, productTitle, reponseAdmin);
+
+    return {to: email, subject, text, html};
+}
 
 export const verificationCodeEmail = {
     key: 'sendVerificationCode',
@@ -58,6 +68,21 @@ export const inviteEnterpriseAdminEmail = {
         } catch (error) {
             logger.error('Error sending invite email:', error);
             throw new CustomError('Error sending invite email', 500);
+        }
+    }
+}
+
+export const confirmableRental = {
+    key: 'confirmableRental',
+    async handle({ data }: { data: { email: string, rentalName: string, productTitle: string, startDate: Date, endDate: Date, response: string, userName: string } }) {
+        const { email, rentalName, productTitle, startDate, endDate, response, userName } = data;
+
+        try {
+          await transporter.sendMail(mailOptionsRental(email, response, productTitle, startDate, endDate, userName, rentalName));
+            return { success: true };
+        } catch (error) {
+            logger.error('Error sending confirmable rental email:', error);
+            throw new CustomError('Error sending confirmable rental email', 500);
         }
     }
 }
