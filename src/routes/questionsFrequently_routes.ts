@@ -6,7 +6,7 @@ import { checkPermission } from "@app/middlewares/checkPermissions_middlewares";
 const questionsFrequentlyRoutes = Router();
 
 questionsFrequentlyRoutes.post('/create', jwtRequired, questionsFrequently.createQuestion);
-questionsFrequentlyRoutes.get('/all', jwtRequired, questionsFrequently.getAllQuestions);
+questionsFrequentlyRoutes.get('/all', questionsFrequently.getAllQuestions);
 questionsFrequentlyRoutes.get('/question/:questionId', jwtRequired, questionsFrequently.getQuestionById);
 questionsFrequentlyRoutes.put('/update/:questionId', jwtRequired, questionsFrequently.updateQuestion);
 questionsFrequentlyRoutes.put('/answer/:questionId', jwtRequired, checkPermission('answer:question'), questionsFrequently.answerQuestion);
