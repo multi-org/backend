@@ -59,7 +59,7 @@ class FrequentlyAskedQuestionServices {
         return question;
     }
 
-    async updateQuestion(id: string, question: string) {
+    async updateQuestion(id: string, question: string, userId: string) {
         logger.info(`Updating question with ID: ${id}`);
 
         const existingQuestion = await questionFrequentily.getQuestionById(id);
@@ -71,6 +71,11 @@ class FrequentlyAskedQuestionServices {
         if (question.trim().length === 0 || !question) {
             logger.warn("Question cannot be empty or undefined");
             throw new CustomError("Question cannot be empty or undefined", 400);
+        }
+
+        if (userId !== existingQuestion.userWhoAsked) {
+            logger.warn("You do not have permission to update this question");
+            throw new CustomError("You do not have permission to update this question", 403);
         }
 
         const updatedQuestion = await questionFrequentily.updateQuestion(id, question);

@@ -44,4 +44,4 @@ EXPOSE 8080
 
 # Aplica migrations e inicia servidor
 # ...existing code...
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/app.js"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]

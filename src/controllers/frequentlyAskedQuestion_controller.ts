@@ -44,9 +44,10 @@ class FrequentlyAskedQuestionController {
     async updateQuestion(req: AuthRequest, res: Response) { 
         const { question } = req.body;
         const { questionId } = req.params;
+        const userId = req.userId!;
 
         try {
-            const result = await questionFrequentilyService.updateQuestion(questionId, question);
+            const result = await questionFrequentilyService.updateQuestion(questionId, question, userId);
             return res.status(200).json({success: true, data: result});
         } catch (error) {
             if (error instanceof Error && 'statusCode' in error) {
