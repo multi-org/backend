@@ -5,7 +5,7 @@
   "main": "server.ts",
   "scripts": {
     "start:dev": "tsx server.ts",
-    "start:watch": "tsx watch server.ts",
+    "start:watch": "tsx watch src/server.ts",
     "dist": "tsup src",
     "start:dist": "npm run dist && node dist/app.js",
     "lint": "eslint",
