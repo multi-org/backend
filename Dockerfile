@@ -3,36 +3,45 @@ FROM node:18-slim AS builder
 
 WORKDIR /usr/src/app
 
-# Dependências do sistema (openssl pro Prisma)
+# Dependências do sistema (openssl para Prisma)
 RUN apt-get update -y && apt-get install -y openssl
 
-# Instala dependências
+# Instala dependências de dev e produção
 COPY package*.json ./
 RUN npm install
 
-# Copia código e gera build
+# Copia todo o código
 COPY . .
-RUN npm run dist
-RUN npx prisma generate
 
+# Build TypeScript
+RUN npm run dist
+
+# Gera Prisma Client
+RUN npx prisma generate
 
 # ---- Runtime stage ----
 FROM node:18-slim
 
 WORKDIR /usr/src/app
 
-# Dependências do sistema (openssl pro Prisma)
+# Dependências do sistema (openssl para Prisma)
 RUN apt-get update -y && apt-get install -y openssl
 
-# Copia apenas o necessário
+# Copia apenas dependências de produção
 COPY package*.json ./
 RUN npm install --omit=dev
 
+# Copia build e pasta prisma do builder
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/prisma ./prisma
+COPY --from=builder /usr/src/app/node_modules/.prisma ./node_modules/.prisma
 
-# Porta (Render sobrescreve com $PORT, mas exponho 8080 por padrão)
+# Gera Prisma Client no runtime (garante que funcione)
+RUN npx prisma generate
+
+# Porta
 EXPOSE 8080
 
-# Roda migrations antes de iniciar o servidor
-CMD npx prisma migrate deploy && node dist/server.js
+# Aplica migrations e inicia servidor
+# ...existing code...
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]

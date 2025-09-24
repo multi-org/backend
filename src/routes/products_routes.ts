@@ -8,7 +8,7 @@ import { uploadImages } from "@app/middlewares/upload_middlewares";
 const routes = express.Router();
 
 routes.post("/:companyId", jwtRequired, checkCompanyPermission("create:product"), uploadImages.array("images"), ProdutoController.createProduct);
-routes.post('/rents/request/:productIdParams', jwtRequired, rentalController.createRentalRequest);
+routes.post('/rents/request/:productId', jwtRequired, rentalController.createRentalRequest);
 
 routes.get("/details/:productId", jwtRequired, ProdutoController.getProductById);
 routes.get("/search/:search", jwtRequired, ProdutoController.getProductsMultipleFields);
