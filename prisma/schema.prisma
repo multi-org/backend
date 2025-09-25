@@ -366,6 +366,8 @@ model Rent {
 model RentalDate {
   id        String   @id @default(uuid()) @db.Uuid
   date      DateTime @db.Date
+  startTime DateTime?
+  endTime   DateTime?
   rentId    String   @db.Uuid
   rent      Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
 

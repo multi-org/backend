@@ -108,6 +108,23 @@ class Rents {
             select: { id: true, status: true, userId: true, productId: true, activityTitle: true, rentalDates: true }
         });
     }
+
+    async findRentsByIdAndHour(productId: string, start: Date, end: Date) {
+        return await prisma.rentalDate.findMany({
+            where: {
+                rent: { productId, status: { in: ['PENDING','CONFIRMED'] } },
+                OR: [
+                    {
+                        startTime: { lt: end },
+                        endTime: { gt: start }
+                    }
+                ]
+            },
+            select: { rent: true }
+        });
+    }
+
+
     
 }
 

@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z, ZodBigInt } from "zod";
 
 // Enum para tipos de cobrança
 export const ChargingTypeEnum = z.enum(['POR_DIA', 'POR_HORA']);
@@ -7,7 +7,7 @@ export const ChargingTypeEnum = z.enum(['POR_DIA', 'POR_HORA']);
 export const RentStatusEnum = z.enum(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']);
 
 // Schema para criação de aluguel
-export const RentalCreateSchema = z.object({
+export const RentalCreateDaySchema = z.object({
   productId: z.string().uuid("ID do produto deve ser um UUID válido"),
   selectedDates: z.array(z.string().datetime("Data de início deve ser uma data válida"))
     .min(1, "Deve haver pelo menos uma data selecionada")
@@ -21,6 +21,27 @@ export const RentalCreateSchema = z.object({
   activityTitle: z.string().min(1, "Título da atividade é obrigatório").max(255, "Título deve ter no máximo 255 caracteres"),
   activityDescription: z.string().max(1000, "Descrição da atividade deve ter no máximo 1000 caracteres").optional()
 });
+
+export const RentalCreateHourSchema = z.object({
+  productId: z.string().uuid(),
+  selectedTimes: z.array(
+    z.object({
+      date: z.string().refine(val => !isNaN(new Date(val).getTime()), {
+        message: "Data inválida"
+      }),
+      startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
+      endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
+    }).refine(t => {
+      const [startH, startM] = t.startTime.split(':').map(Number);
+      const [endH, endM] = t.endTime.split(':').map(Number);
+      return startH*60 + startM < endH*60 + endM;
+    }, { message: "Hora de início deve ser anterior à hora de fim" })
+  ).min(1, "Deve haver pelo menos um horário selecionado"),
+  description: z.string().max(1000).optional(),
+  chargingType: z.literal("POR_HORA"),
+  activityTitle: z.string().min(1).max(255),
+  activityDescription: z.string().max(1000).optional()
+})
 
 // Schema para filtros de busca de produtos disponíveis
 export const ProductSearchFiltersSchema = z.object({
@@ -58,41 +79,20 @@ export const WeeklyAvailabilitySchema = z.object({
   }
 );
 
-// Schema para disponibilidade específica
-export const SpecificAvailabilitySchema = z.object({
-  startDate: z.string().datetime("Data de início deve ser uma data válida"),
-  endDate: z.string().datetime("Data de fim deve ser uma data válida"),
-  isAvailable: z.boolean().default(true),
-  priceOverride: z.number().min(0, "Preço deve ser maior ou igual a zero").optional()
-}).refine(
-  (data) => new Date(data.startDate) <= new Date(data.endDate),
-  {
-    message: "Data de início deve ser anterior ou igual à data de fim",
-    path: ["startDate"]
-  }
-);
 
-// schema para confirmação do pagamento
-export const PaymentConfirmationSchema = z.object({
-  rentalId: z.string().uuid("ID do aluguel deve ser um UUID válido"),
-  paymentMethod: z.enum(['CREDIT_CARD', 'DEBIT_CARD', 'PIX', 'BANK_SLIP']),
-  transactionId: z.string().optional(),
-  pixCode: z.string().optional()
-});
 
 // Tipos TypeScript derivados dos schemas
-export type RentalCreateInput = z.infer<typeof RentalCreateSchema>;
+export type RentalCreateInput = z.infer<typeof RentalCreateDaySchema>;
 export type ProductSearchFilters = z.infer<typeof ProductSearchFiltersSchema>;
 export type RentalStatusUpdate = z.infer<typeof RentalStatusUpdateSchema>;
 export type WeeklyAvailability = z.infer<typeof WeeklyAvailabilitySchema>;
-export type SpecificAvailability = z.infer<typeof SpecificAvailabilitySchema>;
-export type PaymentConfirmation = z.infer<typeof PaymentConfirmationSchema>;
 export type ChargingType = z.infer<typeof ChargingTypeEnum>;
 export type RentStatus = z.infer<typeof RentStatusEnum>;
+export type RentalCreateHourInput = z.infer<typeof RentalCreateHourSchema>;
 
 // Funções de validação
 export function validateRentalCreation(data: unknown) {
-  return RentalCreateSchema.safeParse(data);
+  return RentalCreateDaySchema.safeParse(data);
 }
 
 export function validateProductSearchFilters(data: unknown) {
@@ -107,102 +107,16 @@ export function validateWeeklyAvailability(data: unknown) {
   return WeeklyAvailabilitySchema.safeParse(data);
 }
 
-export function validateSpecificAvailability(data: unknown) {
-  return SpecificAvailabilitySchema.safeParse(data);
+export function validateRentalCreationByHour(data: unknown) {
+  return RentalCreateHourSchema.safeParse(data);
 }
 
-export function validatePaymentConfirmation(data: unknown) {
-  return PaymentConfirmationSchema.safeParse(data);
+export interface HourSlot {
+  date: string,
+  startTime: string,
+  endTime: string
 }
 
-// Interfaces para respostas da API
-export interface RentalResponse {
-  id: string;
-  userId: string;
-  productId: string;
-  startDate: Date;
-  endDate: Date;
-  totalAmount: number;
-  discountApplied: number;
-  status: RentStatus;
-  description?: string;
-  activityTitle: string;
-  activityDescription?: string;
-  createdAt: Date;
-  updatedAt: Date;
-  product: {
-    id: string;
-    title: string;
-    type: string;
-    category: string;
-    imagesUrls: string[];
-    dailyPrice?: number;
-    hourlyPrice?: number;
-    chargingModel: string;
-  };
-  user: {
-    id: string;
-    name: string;
-    email: string;
-  };
-  payment?: {
-    id: string;
-    status: string;
-    method?: string;
-    amount: number;
-    transactionId?: string;
-  };
-}
-
-export interface AvailabilityCheckResult {
-  available: boolean;
-  reason?: string;
-  priceOverride?: number;
-  conflictingRentals?: Array<{
-    id: string;
-    startDate: Date;
-    endDate: Date;
-    status: string;
-  }>;
-}
-
-export interface PaginationResult<T> {
-  data: T[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-    hasNext: boolean;
-    hasPrev: boolean;
-  };
-}
-
-export interface DiscountInfo {
-  discountRate: number;
-  discountAmount: number;
-  finalAmount: number;
-  reason: string;
-}
-
-export interface RentalCalculation {
-  baseAmount: number;
-  discountAmount: number;
-  totalAmount: number;
-  chargingType: ChargingType;
-  period: {
-    days?: number;
-    hours?: number;
-  };
-  pricePerUnit: number;
-}
-
-export interface PIXPaymentInfo {
-  pixCode: string;
-  qrCodeUrl?: string;
-  expirationTime: Date;
-  amount: number;
-}
 
 export enum chargingModel{
   POR_DIA = "POR_DIA",

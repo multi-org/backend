@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/global_middleware';
 import rentalServices  from "@app/services/rental_services";
-import { validateRentalCreation, RentalCreateInput, RentStatus, validateRentalStatusUpdate} from '@app/models/Rental_models';
+import { validateRentalCreation, RentalCreateInput, validateRentalCreationByHour, validateRentalStatusUpdate, RentalCreateHourInput} from '@app/models/Rental_models';
 
 export class RentalController {
   
@@ -9,25 +9,40 @@ export class RentalController {
     try {
       const userId = req.userId!; 
       const { productId } = req.params;
+      let rental;
 
+      if (req.body.chargingType === "POR_DIA") {
+        // Normalizar as datas antes da validação
+        const normalizedBody = {
+          ...req.body,
+          productId,
+          selectedDates: req.body.selectedDates.map((date: string) => new Date(date).toISOString())
+        };
 
-      // Normalizar as datas antes da validação
-      const normalizedBody = {
-        ...req.body,
-        productId,
-        selectedDates: req.body.selectedDates.map((date: string) => new Date(date).toISOString())
-      };
+        const validation = validateRentalCreation(normalizedBody);
+        if (!validation.success) {
+          return res.status(400).json({
+            error: 'Dados inválidos',
+            details: validation.error.errors
+          });
+        }
 
-      const validation = validateRentalCreation(normalizedBody);
-      if (!validation.success) {
-        return res.status(400).json({
-          error: 'Dados inválidos',
-          details: validation.error.errors
-        });
+        const rentalData: RentalCreateInput = validation.data;
+        rental = await rentalServices.createRentalRequestByDay(userId, rentalData);
       }
 
-      const rentalData: RentalCreateInput = validation.data;
-      const rental = await rentalServices.createRentalRequest(userId, rentalData);
+      else if (req.body.chargingType === "POR_HORA") {         
+        const validation = validateRentalCreationByHour({...req.body, productId});
+        if (!validation.success) {
+          return res.status(400).json({
+            error: 'Dados inválidos',
+            details: validation.error.errors
+          });
+        }
+
+        const rentalData: RentalCreateHourInput = validation.data;
+        rental = await rentalServices.createRentalRequestByHour(userId, rentalData);
+      }
 
       res.status(201).json({ success: true, data: rental });
     } catch (error: any) {

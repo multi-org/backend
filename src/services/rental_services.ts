@@ -1,4 +1,4 @@
-import {chargingModel, RentalCreateInput, rentStatus} from '@app/models/Rental_models'
+import {chargingModel, RentalCreateInput, rentStatus, RentalCreateHourInput, HourSlot} from '@app/models/Rental_models'
 import RentsRepository from '../repositories/rents_repository';
 import productRepository from '@app/repositories/products_repository';
 import productServices from './products_services';
@@ -9,8 +9,93 @@ import Queue from "@app/jobs/lib/queue";
 
 class RentalService {
 
-    async createRentalRequest(userId: string, rentalData: RentalCreateInput) { 
-        logger.info(`Creating rental request for userId: ${userId}`);
+    async createRentalRequestByHour(userId: string, rentalData: RentalCreateHourInput) {
+
+        logger.info(`Creating hourly rental request for userId: ${userId}`);
+
+        const company = await productRepository.findProductCompany(rentalData.productId);
+        if (!company.id) {
+            logger.error(`Product not found for productId: ${rentalData.productId}`);
+            throw new CustomError("Produto não encontrado", 404);
+        }
+
+        rentalData.selectedTimes.forEach(slot => {
+            const [sh, sm] = slot.startTime.split(':').map(Number);
+            const [eh, em] = slot.endTime.split(':').map(Number);
+            if (sh * 60 + sm >= eh * 60 + em) {
+                throw new CustomError(`Invalid time format in slot: ${slot.startTime} - ${slot.endTime}`, 400);
+            }
+        });
+
+        for (const slot of rentalData.selectedTimes) {
+            const start = new Date(`${slot.date}T${slot.startTime}:00`);
+            const end = new Date(`${slot.date}T${slot.endTime}:00`);
+
+            const conflicting = await RentsRepository.findRentsByIdAndHour(rentalData.productId, start, end);
+            if (conflicting.length > 0) {
+                logger.info(`Product not available for ${slot.date} ${slot.startTime}-${slot.endTime}`);
+                throw new CustomError("Produto já reservado neste horário", 400);
+            }
+        }
+
+         const calculation = await this.calculateRentalPriceByHour(rentalData.productId, rentalData.selectedTimes, userId);
+
+        // Criar rental no banco
+        const rental = await RentsRepository.createRental({
+            userId,
+            productId: rentalData.productId,
+            description: rentalData.description,
+            activityTitle: rentalData.activityTitle,
+            activityDescription: rentalData.activityDescription,
+            discountApplied: calculation.discountAmount,
+            chargingType: rentalData.chargingType,
+            totalAmount: calculation.totalAmount,
+            status: 'PENDING',
+            rentalDates: {
+                create: rentalData.selectedTimes.map(slot => ({
+                    date: new Date(slot.date),
+                    startTime: new Date(`${slot.date}T${slot.startTime}:00`),
+                    endTime: new Date(`${slot.date}T${slot.endTime}:00`)
+                }))
+            }
+        });
+
+        return {
+            id: rental.id,
+            status: rental.status,
+            dates: rental.rentalDates.map(d => ({ date: d.date, startTime: d.startTime, endTime: d.endTime })),
+            description: rental.description,
+            activityTitle: rental.activityTitle,
+            activityDescription: rental.activityDescription,
+            pricing: calculation,
+            product: {
+                productId: rental.product.id,
+                productTitle: rental.product.title,
+                productType: rental.product.type,
+                productCategory: rental.product.category,
+                productImage: rental.product.imagesUrls,
+                productDiscount: rental.product.discountPercentage,
+                spaceProduct: rental.product.spaceProduct ?? undefined,
+                equipmentProduct: rental.product.equipamentProduct ?? undefined,
+                serviceProduct: rental.product.servicesProduct ?? undefined,
+            },
+            companyThatOwnsProduct: {
+                id: company.id,
+                name: company.popularName,
+                email: company.email,
+                associateDiscountRate: company.associateDiscountRate
+            },
+            client: {
+                userId: rental.user.userId,
+                name: rental.user.name,
+                email: rental.user.email,
+                phone: rental.user.phoneNumber
+            }
+        };
+    }
+
+    async createRentalRequestByDay(userId: string, rentalData: RentalCreateInput) { 
+        logger.info(`Creating daily rental request for userId: ${userId}`);
 
         const company = await productRepository.findProductCompany(rentalData.productId);
         if (!company.id) {
@@ -24,7 +109,7 @@ class RentalService {
             throw new CustomError(availability.reason || 'Produto não disponível', 400);
         }
 
-        const calculation = await this.calculateRentalPrice(
+        const calculation = await this.calculateRentalPriceByDays(
             rentalData.productId,
             rentalData.selectedDates.map(date => new Date(date)),
             rentalData.chargingType as chargingModel,
@@ -51,7 +136,7 @@ class RentalService {
         return {
             id: rental.id,
             status: rental.status,
-            dates: rental.rentalDates.map(d => d.date), // 🔑 agora vem daqui
+            dates: rental.rentalDates.map(d => d.date),
             description: rental.description,
             activityTitle: rental.activityTitle,
             activityDescription: rental.activityDescription,
@@ -222,7 +307,7 @@ class RentalService {
         return { available: true };
     }
 
-    async calculateRentalPrice(productId: string, dates: Date[], chargingType: chargingModel, userId: string) {
+    async calculateRentalPriceByDays(productId: string, dates: Date[], chargingType: chargingModel, userId: string) {
         logger.info(`Calculating rental price for productId: ${productId}, selectedDates: ${dates}, chargingType: ${chargingType}, userId: ${userId}`);
 
         const product = await productServices.findProductById(productId);
@@ -234,7 +319,7 @@ class RentalService {
         let baseAmount = 0;
         let pricePerUnit = 0;
 
-        if (chargingType === chargingModel.POR_DIA) {
+        if (chargingType === chargingModel.POR_DIA || chargingType === chargingModel.AMBOS) {
             if (!product.dailyPrice) {
                 logger.error(`Daily price not set for productId: ${productId}`);
                 throw new CustomError("Daily price not set for this product", 400);
@@ -243,14 +328,6 @@ class RentalService {
             pricePerUnit = Number(product.dailyPrice);
             baseAmount = dates.length * pricePerUnit;
 
-        } else if (chargingType === chargingModel.POR_HORA) {
-            if (!product.hourlyPrice) {
-                logger.error(`Hourly price not set for productId: ${productId}`);
-                throw new CustomError("Hourly price not set for this product", 400);
-            }
-
-            pricePerUnit = Number(product.hourlyPrice);
-            baseAmount = dates.length * pricePerUnit;
         }
 
         let discountAmount = 0;
@@ -271,6 +348,39 @@ class RentalService {
             period: { days: dates.length },
             pricePerUnit,
             totalAmount
+        };
+    }
+
+    private async calculateRentalPriceByHour(productId: string, selectedTimes: HourSlot[], userId: string) {
+        const product = await productServices.findProductById(productId);
+        if (!product.hourlyPrice) {
+            throw new CustomError("Preço por hora não definido para este produto", 400);
+        }
+
+        let baseAmount = 0;
+        selectedTimes.forEach(slot => {
+            const start = new Date(`${slot.date}T${slot.startTime}:00`);
+            const end = new Date(`${slot.date}T${slot.endTime}:00`);
+            const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+            baseAmount += durationHours * Number(product.hourlyPrice);
+        });
+
+        let discountAmount = 0;
+        let totalAmount = baseAmount;
+
+        const associate = await userRepository.findUserAssociateToCompany(userId, product.ownerId);
+        if (associate) {
+            discountAmount = baseAmount * (Number(product.discountPercentage) / 100);
+            totalAmount = baseAmount - discountAmount; 
+        }
+
+        return {
+            baseAmount,
+            discountAmount,
+            totalAmount,
+            chargingType: chargingModel.POR_HORA,
+            period: { hours: baseAmount / Number(product.hourlyPrice) },
+            pricePerUnit: Number(product.hourlyPrice)
         };
     }
 
