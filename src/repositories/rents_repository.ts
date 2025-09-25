@@ -3,18 +3,16 @@ import { PrismaClient, Rent, Payment, RentStatus } from '@prisma/client';
 const prisma = new PrismaClient();
 
 class Rents {
-    async findRentsById(productId: string, startDate: Date, endDate: Date) {
-        return await prisma.rent.findMany({
+    async findRentsById(productId: string, date: Date) {
+        return await prisma.rentalDate.findMany({
             where: {
-                productId,
-                status: { in: ['PENDING', 'CONFIRMED'] },
-                OR: [
-                    { startDate: { lte: startDate }, endDate: { gt: startDate } },
-                    { startDate: { lt: endDate }, endDate: { gte: endDate } },
-                    { startDate: { gte: startDate }, endDate: { lte: endDate } },
-                ]
+                date,
+                rent: {
+                    productId,
+                    status: { in: ['PENDING', 'CONFIRMED'] },
+                }
             },
-            select: { id: true, startDate: true, endDate: true, status: true }
+            select: { rent: true }
         });
     }
 
@@ -23,21 +21,15 @@ class Rents {
             where: {
                 productId,
                 status: { in: ['PENDING', 'CONFIRMED'] },
-                OR: [
-                    {
-                        startDate: { lte: endDate },
-                        endDate: { gte: startDate }
-                    }
-                ]
             }
         });
     }
 
     async createRental(data: any) {
-        
         return await prisma.rent.create({
-            data, 
+            data,
             include: {
+                rentalDates: true,
                 product: {
                     select: {
                         id: true,
@@ -70,7 +62,6 @@ class Rents {
                             }
                         },
                         discountPercentage: true,
-                        
                     }
                 },
                 user: {
@@ -82,8 +73,9 @@ class Rents {
                     }
                 }
             }
-        })
+        });
     }
+
 
     async findRentalsByUserId(userId: string) {
 
@@ -91,8 +83,8 @@ class Rents {
             where: {userId},
             include: {
                 product: true,
-                payment: true
-
+                payment: true,
+                rentalDates: true
             },
             orderBy: {
                 createdAt: 'desc'
@@ -105,6 +97,7 @@ class Rents {
     async findRentalById(rentId: string) {
         return await prisma.rent.findUnique({
             where: { id: rentId },
+            select: { id: true, status: true, userId: true, productId: true, activityTitle: true, rentalDates: true }
         });
     }
 
@@ -112,6 +105,7 @@ class Rents {
         return await prisma.rent.update({
             where: { id: rentId },
             data: { status },
+            select: { id: true, status: true, userId: true, productId: true, activityTitle: true, rentalDates: true }
         });
     }
     

@@ -15,8 +15,7 @@ export class RentalController {
       const normalizedBody = {
         ...req.body,
         productId,
-        startDate: new Date(req.body.startDate).toISOString(),
-        endDate: new Date(req.body.endDate).toISOString()
+        selectedDates: req.body.selectedDates.map((date: string) => new Date(date).toISOString())
       };
 
       const validation = validateRentalCreation(normalizedBody);

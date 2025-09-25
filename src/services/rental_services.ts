@@ -18,35 +18,40 @@ class RentalService {
             throw new CustomError("Produto não encontrado", 404);
         }
 
-        const availability = await this.checkProductAvailability(rentalData.productId, new Date(rentalData.startDate), new Date(rentalData.endDate));
-        if(!availability.available) {
+        const availability = await this.checkProductAvailabilityForDays(rentalData.productId, rentalData.selectedDates.map(date => new Date(date)));
+        if (!availability.available) {
             logger.error(`Rental request failed: ${availability.reason || 'Produto não disponível'}`);
             throw new CustomError(availability.reason || 'Produto não disponível', 400);
         }
 
-        const calculation = await this.calculateRentalPrice(rentalData.productId, new Date(rentalData.startDate), new Date(rentalData.endDate), rentalData.chargingType as chargingModel, userId);
+        const calculation = await this.calculateRentalPrice(
+            rentalData.productId,
+            rentalData.selectedDates.map(date => new Date(date)),
+            rentalData.chargingType as chargingModel,
+            userId
+        );
 
         const rental = await RentsRepository.createRental({
             userId: userId,
             productId: rentalData.productId,
-            startDate: new Date(rentalData.startDate),
-            endDate: new Date(rentalData.endDate),
             description: rentalData.description,
             activityTitle: rentalData.activityTitle,
             activityDescription: rentalData.activityDescription,
             discountApplied: calculation.discountAmount,
             chargingType: rentalData.chargingType,
             totalAmount: calculation.totalAmount,
-            status: 'PENDING'
+            status: 'PENDING',
+            rentalDates: {
+                create: rentalData.selectedDates.map((date: string) => ({
+                    date: new Date(date)
+                }))
+            }
         });
 
         return {
             id: rental.id,
             status: rental.status,
-            startDate: rental.startDate,
-            endDate: rental.endDate,
-            startTime: rental.product.chargingModel ==  "POR_HORA" ? rentalData.startDate : null,
-            endTime: rental.product.chargingModel ==  "POR_HORA" ? rentalData.endDate : null,
+            dates: rental.rentalDates.map(d => d.date), // 🔑 agora vem daqui
             description: rental.description,
             activityTitle: rental.activityTitle,
             activityDescription: rental.activityDescription,
@@ -58,39 +63,23 @@ class RentalService {
                 pricePerUnit: calculation.pricePerUnit,
                 totalAmount: calculation.totalAmount
             },
-            
-
             product: {
-                productId: rental.productId,
+                productId: rental.product.id,
                 productTitle: rental.product.title,
                 productType: rental.product.type,
                 productCategory: rental.product.category,
                 productImage: rental.product.imagesUrls,
                 productDiscount: rental.product.discountPercentage,
-
-                spaceProduct: rental.product.spaceProduct ? {
-                    capacity: rental.product.spaceProduct.capacity,
-                    area: rental.product.spaceProduct.area,
-                } : undefined,
-                equipmentProduct: rental.product.equipamentProduct ? {
-                    brand: rental.product.equipamentProduct.brand,
-                    model: rental.product.equipamentProduct.model,
-                    specifications: rental.product.equipamentProduct.specifications,
-                    stock: rental.product.equipamentProduct.stock,
-                } : undefined,
-                serviceProduct: rental.product.servicesProduct ? {
-                    durationMinutes: rental.product.servicesProduct.durationMinutes,
-                    requirements: rental.product.servicesProduct.requirements,
-                } : undefined
+                spaceProduct: rental.product.spaceProduct ?? undefined,
+                equipmentProduct: rental.product.equipamentProduct ?? undefined,
+                serviceProduct: rental.product.servicesProduct ?? undefined,
             },
-
             companyThatOwnsProduct: {
                 id: company.id,
                 name: company.popularName,
                 email: company.email,
                 associateDiscountRate: company.associateDiscountRate
             },
-
             client: {
                 userId: rental.user.userId,
                 name: rental.user.name,
@@ -118,8 +107,8 @@ class RentalService {
 
                 return {
                     id: rental.id,
-                    startDate: rental.startDate,
-                    endDate: rental.endDate,
+                    dates: rental.rentalDates.map(d => d.date),
+                    
                     description: rental.description,
                     activityTitle: rental.activityTitle,
                     activityDescription: rental.activityDescription,
@@ -184,8 +173,7 @@ class RentalService {
             email: user.email,
             rentalName: rental.activityTitle,
             productTitle: product.title,
-            startDate: rental.startDate,
-            endDate: rental.endDate,
+            dates: rental.rentalDates.map(d => d.date),
             response: updatedRental.status,
             userName: user.name
         }, { priority: 1 });
@@ -196,47 +184,47 @@ class RentalService {
         };
     }
     
-    async checkProductAvailability(productId: string, startDate: Date, endDate: Date) {
-        logger.info("Checking availability");
+    async checkProductAvailabilityForDays(productId: string, dates: Date[]) {
+        logger.info("Checking availability for specific days");
 
-        const conflictingRentals = await RentsRepository.findRentsById(productId, startDate, endDate);
+        for (const date of dates) {
+            const conflicting = await RentsRepository.findRentsById(productId, date);
+            if (conflicting.length > 0) {
+                logger.info("Product not available due to conflicting rentals");
+                return {
+                    available: false,
+                    reason: 'Produto já está reservado para este período',
+                    conflictingRentals: conflicting.map(rental => ({
+                        id: rental.rent.id,
+                        status: rental.rent.status
+                    }))
+                };
+            }
 
-        if (conflictingRentals.length > 0) {
-            logger.info("Product not available due to conflicting rentals");
-            return {
-                available: false,
-                reason: 'Produto já está reservado para este período',
-                conflictingRentals: conflictingRentals.map(rental => ({
-                    id: rental.id,
-                    startDate: rental.startDate,
-                    endDate: rental.endDate,
-                    status: rental.status
-                }))
-            };
+            const specificAvailability = await productRepository.specificAvailability(productId, date, date);
+            if (specificAvailability) {
+                logger.info("Product not available due to specific availability settings");
+                return {
+                    available: false,
+                    reason: 'Produto bloqueado para este período'
+                };
+            }
+
+            const weeklyAvailabilityCheck = await this.checkWeeklyAvailability(productId, date, date);
+            if (!weeklyAvailabilityCheck.available) {
+                return {
+                    available: false,
+                    reason: `Produto não disponível em ${date.toISOString().split("T")[0]}`
+                };
+            }
         }
 
-        const specificAvailability = await productRepository.specificAvailability(productId, startDate, endDate);
-        if (specificAvailability) {
-            logger.info("Product not available due to specific availability settings");
-            return {
-                available: false,
-                reason: 'Produto bloqueado para este período'
-            };
-        }
-
-        const weeklyAvailabilityCheck = await this.checkWeeklyAvailability(productId, startDate, endDate);
-        if (!weeklyAvailabilityCheck.available) {
-            return weeklyAvailabilityCheck;
-        }
-
-        return {
-            available: true
-        };
+        return { available: true };
     }
 
-    async calculateRentalPrice(productId: string, startDate: Date, endDate: Date, chargingType: chargingModel, userId: string) {
-        logger.info(`Calculating rental price for productId: ${productId}, startDate: ${startDate}, endDate: ${endDate}, chargingType: ${chargingType}, userId: ${userId}`);
-        
+    async calculateRentalPrice(productId: string, dates: Date[], chargingType: chargingModel, userId: string) {
+        logger.info(`Calculating rental price for productId: ${productId}, selectedDates: ${dates}, chargingType: ${chargingType}, userId: ${userId}`);
+
         const product = await productServices.findProductById(productId);
         if (product.chargingModel !== chargingModel.AMBOS && product.chargingModel !== chargingType) {
             logger.error(`Invalid charging model for this product`);
@@ -244,7 +232,6 @@ class RentalService {
         }
 
         let baseAmount = 0;
-        let period: { days?: number; hours?: number } = {};
         let pricePerUnit = 0;
 
         if (chargingType === chargingModel.POR_DIA) {
@@ -253,10 +240,8 @@ class RentalService {
                 throw new CustomError("Daily price not set for this product", 400);
             }
 
-            const days = Math.ceil(endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
-            period.days = days;
             pricePerUnit = Number(product.dailyPrice);
-            baseAmount = days * pricePerUnit;
+            baseAmount = dates.length * pricePerUnit;
 
         } else if (chargingType === chargingModel.POR_HORA) {
             if (!product.hourlyPrice) {
@@ -264,10 +249,8 @@ class RentalService {
                 throw new CustomError("Hourly price not set for this product", 400);
             }
 
-            const hours = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60));
-            period.hours = hours;
             pricePerUnit = Number(product.hourlyPrice);
-            baseAmount = hours * pricePerUnit;
+            baseAmount = dates.length * pricePerUnit;
         }
 
         let discountAmount = 0;
@@ -285,7 +268,7 @@ class RentalService {
             baseAmount,
             discountAmount,
             chargingType,
-            period,
+            period: { days: dates.length },
             pricePerUnit,
             totalAmount
         };

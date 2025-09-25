@@ -1,4 +1,3 @@
-import exp from "constants";
 import { z } from "zod";
 
 // Enum para tipos de cobrança
@@ -10,56 +9,28 @@ export const RentStatusEnum = z.enum(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMP
 // Schema para criação de aluguel
 export const RentalCreateSchema = z.object({
   productId: z.string().uuid("ID do produto deve ser um UUID válido"),
-  startDate: z.string().datetime("Data de início deve ser uma data válida"),
-  endDate: z.string().datetime("Data de fim deve ser uma data válida"),
+  selectedDates: z.array(z.string().datetime("Data de início deve ser uma data válida"))
+    .min(1, "Deve haver pelo menos uma data selecionada")
+    .refine(arr => arr.every(date => new Date(date) > new Date()), {
+      message: "Todas as datas selecionadas devem ser no futuro",
+      path: ["selectedDates"]
+    }),
+
   description: z.string().max(1000, "Descrição deve ter no máximo 1000 caracteres").optional(),
   chargingType: ChargingTypeEnum,
   activityTitle: z.string().min(1, "Título da atividade é obrigatório").max(255, "Título deve ter no máximo 255 caracteres"),
   activityDescription: z.string().max(1000, "Descrição da atividade deve ter no máximo 1000 caracteres").optional()
-}).refine((data) => new Date(data.startDate) < new Date(data.endDate),
-  {
-    message: "Data de início deve ser anterior à data de fim",
-    path: ["startDate"]
-  }
-).refine((data) => new Date(data.startDate) > new Date(),
-  {
-    message: "Data de início não pode ser no passado",
-    path: ["startDate"]
-  }
-);
+});
 
 // Schema para filtros de busca de produtos disponíveis
 export const ProductSearchFiltersSchema = z.object({
   type: z.enum(['SPACE', 'EQUIPMENT', 'SERVICE']).optional(),
   category: z.string().optional(),
   startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
   minPrice: z.number().min(0, "Preço mínimo deve ser maior ou igual a zero").optional(),
   maxPrice: z.number().min(0, "Preço máximo deve ser maior ou igual a zero").optional(),
   search: z.string().optional(),
-}).refine(
-  (data) => {
-    if (data.minPrice && data.maxPrice) {
-      return data.minPrice <= data.maxPrice;
-    }
-    return true;
-  },
-  {
-    message: "Preço mínimo deve ser menor ou igual ao preço máximo",
-    path: ["minPrice"]
-  }
-).refine(
-  (data) => {
-    if (data.startDate && data.endDate) {
-      return new Date(data.startDate) < new Date(data.endDate);
-    }
-    return true;
-  },
-  {
-    message: "Data de início deve ser anterior à data de fim",
-    path: ["startDate"]
-  }
-);
+});
 
 // Schema para atualização de status de aluguel
 export const RentalStatusUpdateSchema = z.object({

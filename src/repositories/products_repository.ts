@@ -351,9 +351,13 @@ export class ProductsRepository {
                         status: { in: ['PENDING', 'CONFIRMED'] }
                     },
                     select: {
-                        startDate: true,
-                        endDate: true,
-                        status: true
+                        id: true,
+                        status: true,
+                        rentalDates: {
+                            select: {
+                                date: true
+                            }
+                        }
                     }
                 }
             }
@@ -372,21 +376,23 @@ export class ProductsRepository {
         });
     }
 
-    async findRentsByDate(productId: string, dateString: string) { 
-        return await prisma.rent.findMany({
+    async findRentsByDate(productId: string, dateString: string) {
+        const targetDate = new Date(dateString);
+
+        return await prisma.rentalDate.findMany({
         where: {
-          productId,
-          status: {
-            in: ['PENDING', 'CONFIRMED']
-          },
-          startDate: {
-            lte: new Date(dateString + 'T23:59:59')
-          },
-          endDate: {
-            gte: new Date(dateString + 'T00:00:00')
-          }
-        }
-      });
+          date: targetDate,
+            rent: {
+                productId,
+                status: { in: ['PENDING', 'CONFIRMED'] }
+            }
+            },
+            include: {
+                rent: {
+                    select: { id: true, status: true }
+                }
+            }
+        });
     }
 
     async findProductCompany(productId: string) { 
