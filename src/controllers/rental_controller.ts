@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middlewares/global_middleware';
 import rentalServices  from "@app/services/rental_services";
-import { validateRentalCreation, RentalCreateInput, RentStatus} from '@app/models/Rental_models';
+import { validateRentalCreation, RentalCreateInput, validateRentalStatusUpdate} from '@app/models/Rental_models';
 
 export class RentalController {
   
@@ -10,25 +10,16 @@ export class RentalController {
       const userId = req.userId!; 
       const { productId } = req.params;
 
+        const validation = validateRentalCreation({...req.body, productId});
+        if (!validation.success) {
+          return res.status(400).json({
+            error: 'Dados inválidos',
+            details: validation.error.errors
+          });
+        }
 
-      // Normalizar as datas antes da validação
-      const normalizedBody = {
-        ...req.body,
-        productId,
-        startDate: new Date(req.body.startDate).toISOString(),
-        endDate: new Date(req.body.endDate).toISOString()
-      };
-
-      const validation = validateRentalCreation(normalizedBody);
-      if (!validation.success) {
-        return res.status(400).json({
-          error: 'Dados inválidos',
-          details: validation.error.errors
-        });
-      }
-
-      const rentalData: RentalCreateInput = validation.data;
-      const rental = await rentalServices.createRentalRequest(userId, rentalData);
+        const rentalData: RentalCreateInput = validation.data;
+        const rental = await rentalServices.createRentalRequest(userId, rentalData);
 
       res.status(201).json({ success: true, data: rental });
     } catch (error: any) {
@@ -43,17 +34,41 @@ export class RentalController {
   async getUserRentals(req: AuthRequest, res: Response) {
     try {
       const userId = req.userId!;
-      const { status } = req.query;
-
-      const result = await rentalServices.getUserRentals(
-        userId, 
-        status as RentStatus | undefined
-      );
+      
+      const result = await rentalServices.getUserRentals(userId);
 
       res.json({
         success: true,
         rentals: result.rentals
       });
+    } catch (error: any) {
+      const statusCode = error.status || 500;
+      return res.status(statusCode).json({
+        success: false,
+        message: error.message || "Erro interno do servidor",
+      });
+    }
+  }
+
+  async confirmRental(req: AuthRequest, res: Response) {
+    try {
+      const { rentalId } = req.params;
+      const { response, reason } = req.body;
+
+      const validation = validateRentalStatusUpdate({ status: response, reason });
+      if (!validation.success) {
+        return res.status(400).json({
+          error: 'Dados inválidos',
+          details: validation.error.errors
+        });
+      }
+      
+      const updatedRental = await rentalServices.confirmRental(rentalId, response);
+      res.json({
+        success: true,
+        data: updatedRental
+      });
+
     } catch (error: any) {
       const statusCode = error.status || 500;
       return res.status(statusCode).json({

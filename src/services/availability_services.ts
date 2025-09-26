@@ -22,7 +22,6 @@ class AvailabilityService {
         throw new CustomError('Start date must be before end date', 400);
       }
 
-      // Limitar o range máximo para evitar consultas muito pesadas
       const maxDays = 90; // 3 meses
       const diffTime = Math.abs(end.getTime() - start.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -44,7 +43,10 @@ class AvailabilityService {
       throw new CustomError("Produto foi excluído", 410);
     }
 
-    const availableDates = await this.defineDefaultRangeAvailableDates(options, product as productAvailabilityInterface);
+    const occupiedDates = product.rents.flatMap(r => r.rentalDates.map(d => d.date));
+
+    const availableDates = await this.defineDefaultRangeAvailableDates(options, product as productAvailabilityInterface,
+    occupiedDates);
 
     logger.info(`Available dates found successfully`);
     return availableDates;
@@ -100,7 +102,7 @@ class AvailabilityService {
     return availableHours;
   }
 
-  private async defineDefaultRangeAvailableDates(options: AvailabilityOptions = {}, product: productAvailabilityInterface): Promise<AvailabilityDate[]> {
+  private async defineDefaultRangeAvailableDates(options: AvailabilityOptions = {}, product: productAvailabilityInterface, occupiedDates: Date[] = []): Promise<AvailabilityDate[]> {
     logger.info(`Defining default range of available dates`);
 
     // Definir range de datas (padrão: próximos 30 dias)
@@ -127,11 +129,7 @@ class AvailabilityService {
       });
 
       logger.info('Checking for existing rents');
-      const isOccupied = product.rents?.some(rent => {
-        const rentStart = new Date(rent.startDate).toISOString().split('T')[0];
-        const rentEnd = new Date(rent.endDate).toISOString().split('T')[0];
-        return dateString >= rentStart && dateString <= rentEnd;
-      });
+       const isOccupied = occupiedDates.some(occ => occ.toISOString().split('T')[0] === dateString);
 
       logger.info('Determine availability');
       let isAvailable = true;

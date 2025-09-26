@@ -275,8 +275,8 @@ export interface productAvailabilityInterface{
     updatedAt: Date;
   }[];
   rents: {
-    startDate: Date;
-    endDate: Date;
+    id: string;
+    rentalDates: {date: Date}[];
     status: string;
   }[];
 }
