@@ -12,6 +12,7 @@ class RentalService {
 
     async createRentalRequest(userId: string, rentalData: RentalCreateInput) {
         logger.info(`Creating rental request for userId: ${userId} with chargingType: ${rentalData.chargingType}`);
+        const chargingTypeEnum = chargingModel[rentalData.chargingType as keyof typeof chargingModel];
         
         const company = await productRepository.findProductCompany(rentalData.productId);
         if (!company.id) {
@@ -30,7 +31,7 @@ class RentalService {
             }
         }
 
-        const availability = await this.checkProductAvailability(rentalData.productId, rentalData.reservations, rentalData.chargingType);
+        const availability = await this.checkProductAvailability(rentalData.productId, rentalData.reservations, chargingTypeEnum);
         if (!availability.available) {
             logger.error(`Rental request failed: ${availability.reason || 'Produto não disponível'}`);
             throw new CustomError(availability.reason || 'Produto não disponível', 400);
@@ -40,7 +41,7 @@ class RentalService {
         const calculation = await this.calculateRentalPrice(
             rentalData.productId,
             rentalData.reservations,
-            rentalData.chargingType,
+            chargingTypeEnum,
             userId
         );
 
