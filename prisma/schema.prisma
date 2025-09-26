@@ -366,12 +366,11 @@ model Rent {
 model RentalDate {
   id        String   @id @default(uuid()) @db.Uuid
   date      DateTime @db.Date
-  startTime DateTime?
-  endTime   DateTime?
+  hour      String?  @db.VarChar(5)
   rentId    String   @db.Uuid
   rent      Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
 
-  @@unique([rentId, date])
+  @@unique([rentId, date, hour])
   @@map("rental_dates")
   @@schema("multi")
 }

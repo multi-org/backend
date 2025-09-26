@@ -16,6 +16,20 @@ class Rents {
         });
     }
 
+    async findRentsByIdAndHour(productId: string, date: Date, hour: string) {
+        return await prisma.rentalDate.findMany({
+            where: {
+                date,
+                hour,
+                rent: {
+                    productId,
+                    status: { in: ['PENDING', 'CONFIRMED'] },
+                }
+            },
+            select: { rent: true }
+        });
+    }
+
     async countRentsProduct(productId: string, startDate: Date, endDate: Date) {
         return await prisma.rent.count({
             where: {
@@ -80,7 +94,7 @@ class Rents {
     async findRentalsByUserId(userId: string) {
 
         const rentals = await prisma.rent.findMany({
-            where: {userId},
+            where: { userId },
             include: {
                 product: true,
                 payment: true,
@@ -92,8 +106,8 @@ class Rents {
         });
 
         return rentals;
-    }     
-    
+    }
+
     async findRentalById(rentId: string) {
         return await prisma.rent.findUnique({
             where: { id: rentId },
@@ -108,24 +122,6 @@ class Rents {
             select: { id: true, status: true, userId: true, productId: true, activityTitle: true, rentalDates: true }
         });
     }
-
-    async findRentsByIdAndHour(productId: string, start: Date, end: Date) {
-        return await prisma.rentalDate.findMany({
-            where: {
-                rent: { productId, status: { in: ['PENDING','CONFIRMED'] } },
-                OR: [
-                    {
-                        startTime: { lt: end },
-                        endTime: { gt: start }
-                    }
-                ]
-            },
-            select: { rent: true }
-        });
-    }
-
-
-    
 }
 
 export default new Rents();

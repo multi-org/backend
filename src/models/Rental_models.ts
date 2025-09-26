@@ -1,47 +1,38 @@
-import { z, ZodBigInt } from "zod";
+import { z } from "zod";
 
-// Enum para tipos de cobrança
-export const ChargingTypeEnum = z.enum(['POR_DIA', 'POR_HORA']);
+export const ChargingTypeEnum = z.enum(['POR_DIA', 'POR_HORA', 'AMBOS']);
 
-// Enum para status de aluguel
 export const RentStatusEnum = z.enum(['PENDING', 'CONFIRMED', 'CANCELLED', 'COMPLETED']);
 
-// Schema para criação de aluguel
-export const RentalCreateDaySchema = z.object({
-  productId: z.string().uuid("ID do produto deve ser um UUID válido"),
-  selectedDates: z.array(z.string().datetime("Data de início deve ser uma data válida"))
-    .min(1, "Deve haver pelo menos uma data selecionada")
-    .refine(arr => arr.every(date => new Date(date) > new Date()), {
-      message: "Todas as datas selecionadas devem ser no futuro",
-      path: ["selectedDates"]
-    }),
 
-  description: z.string().max(1000, "Descrição deve ter no máximo 1000 caracteres").optional(),
+export const ReservationSlotSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data deve estar no formato YYYY-MM-DD"),
+  hours: z.array(z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Hora deve estar no formato HH:MM")).optional().default([]),
+})
+
+export const RentalCreateSchema = z.object({
+  productId: z.string().uuid("ID do produto deve ser um UUID válido"),
   chargingType: ChargingTypeEnum,
+  reservations: z.array(ReservationSlotSchema)
+    .min(1, "Deve haver pelo menos uma reserva selecionada")
+    .refine(arr => arr.every(res => new Date(res.date) > new Date()), {
+      message: "Todas as datas de reserva devem ser no futuro",
+      path: ["reservations"]
+    }),
+  description: z.string().max(1000, "Descrição deve ter no máximo 1000 caracteres").optional(),
   activityTitle: z.string().min(1, "Título da atividade é obrigatório").max(255, "Título deve ter no máximo 255 caracteres"),
   activityDescription: z.string().max(1000, "Descrição da atividade deve ter no máximo 1000 caracteres").optional()
+}).refine(data => {
+  if (data.chargingType === 'POR_DIA') {
+    return data.reservations.every(res => res.hours.length === 0);
+  } else if (data.chargingType === 'POR_HORA') {
+    return data.reservations.every(res => res.hours.length > 0);
+  }
+  return true; // Should not happen with strict enum
+}, {
+  message: "Para aluguéis POR_DIA, 'hours' deve ser vazio. Para aluguéis POR_HORA, 'hours' deve conter horários.",
+  path: ["reservations"]
 });
-
-export const RentalCreateHourSchema = z.object({
-  productId: z.string().uuid(),
-  selectedTimes: z.array(
-    z.object({
-      date: z.string().refine(val => !isNaN(new Date(val).getTime()), {
-        message: "Data inválida"
-      }),
-      startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/),
-      endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/)
-    }).refine(t => {
-      const [startH, startM] = t.startTime.split(':').map(Number);
-      const [endH, endM] = t.endTime.split(':').map(Number);
-      return startH*60 + startM < endH*60 + endM;
-    }, { message: "Hora de início deve ser anterior à hora de fim" })
-  ).min(1, "Deve haver pelo menos um horário selecionado"),
-  description: z.string().max(1000).optional(),
-  chargingType: z.literal("POR_HORA"),
-  activityTitle: z.string().min(1).max(255),
-  activityDescription: z.string().max(1000).optional()
-})
 
 // Schema para filtros de busca de produtos disponíveis
 export const ProductSearchFiltersSchema = z.object({
@@ -82,17 +73,16 @@ export const WeeklyAvailabilitySchema = z.object({
 
 
 // Tipos TypeScript derivados dos schemas
-export type RentalCreateInput = z.infer<typeof RentalCreateDaySchema>;
+export type RentalCreateInput = z.infer<typeof RentalCreateSchema>;
 export type ProductSearchFilters = z.infer<typeof ProductSearchFiltersSchema>;
 export type RentalStatusUpdate = z.infer<typeof RentalStatusUpdateSchema>;
 export type WeeklyAvailability = z.infer<typeof WeeklyAvailabilitySchema>;
 export type ChargingType = z.infer<typeof ChargingTypeEnum>;
 export type RentStatus = z.infer<typeof RentStatusEnum>;
-export type RentalCreateHourInput = z.infer<typeof RentalCreateHourSchema>;
 
 // Funções de validação
 export function validateRentalCreation(data: unknown) {
-  return RentalCreateDaySchema.safeParse(data);
+  return RentalCreateSchema.safeParse(data);
 }
 
 export function validateProductSearchFilters(data: unknown) {
@@ -106,17 +96,6 @@ export function validateRentalStatusUpdate(data: unknown) {
 export function validateWeeklyAvailability(data: unknown) {
   return WeeklyAvailabilitySchema.safeParse(data);
 }
-
-export function validateRentalCreationByHour(data: unknown) {
-  return RentalCreateHourSchema.safeParse(data);
-}
-
-export interface HourSlot {
-  date: string,
-  startTime: string,
-  endTime: string
-}
-
 
 export enum chargingModel{
   POR_DIA = "POR_DIA",

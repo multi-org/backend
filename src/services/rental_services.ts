@@ -1,4 +1,4 @@
-import {chargingModel, RentalCreateInput, rentStatus, RentalCreateHourInput, HourSlot} from '@app/models/Rental_models'
+import {chargingModel, RentalCreateInput, rentStatus} from '@app/models/Rental_models'
 import RentsRepository from '../repositories/rents_repository';
 import productRepository from '@app/repositories/products_repository';
 import productServices from './products_services';
@@ -8,39 +8,55 @@ import Queue from "@app/jobs/lib/queue";
 
 
 class RentalService {
+    
 
-    async createRentalRequestByHour(userId: string, rentalData: RentalCreateHourInput) {
-
-        logger.info(`Creating hourly rental request for userId: ${userId}`);
-
+    async createRentalRequest(userId: string, rentalData: RentalCreateInput) {
+        logger.info(`Creating rental request for userId: ${userId} with chargingType: ${rentalData.chargingType}`);
+        
         const company = await productRepository.findProductCompany(rentalData.productId);
         if (!company.id) {
             logger.error(`Product not found for productId: ${rentalData.productId}`);
             throw new CustomError("Produto não encontrado", 404);
         }
 
-        rentalData.selectedTimes.forEach(slot => {
-            const [sh, sm] = slot.startTime.split(':').map(Number);
-            const [eh, em] = slot.endTime.split(':').map(Number);
-            if (sh * 60 + sm >= eh * 60 + em) {
-                throw new CustomError(`Invalid time format in slot: ${slot.startTime} - ${slot.endTime}`, 400);
-            }
-        });
-
-        for (const slot of rentalData.selectedTimes) {
-            const start = new Date(`${slot.date}T${slot.startTime}:00`);
-            const end = new Date(`${slot.date}T${slot.endTime}:00`);
-
-            const conflicting = await RentsRepository.findRentsByIdAndHour(rentalData.productId, start, end);
-            if (conflicting.length > 0) {
-                logger.info(`Product not available for ${slot.date} ${slot.startTime}-${slot.endTime}`);
-                throw new CustomError("Produto já reservado neste horário", 400);
+        if (rentalData.chargingType === chargingModel.POR_HORA) {
+            for (const reservation of rentalData.reservations) {
+                for (const hour of reservation.hours) {
+                    const [h, m] = hour.split(':').map(Number);
+                    if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) {
+                        throw new CustomError(`Formato de hora inválido: ${hour}`, 400);
+                    }
+                }
             }
         }
 
-         const calculation = await this.calculateRentalPriceByHour(rentalData.productId, rentalData.selectedTimes, userId);
+        const availability = await this.checkProductAvailability(rentalData.productId, rentalData.reservations, rentalData.chargingType);
+        if (!availability.available) {
+            logger.error(`Rental request failed: ${availability.reason || 'Produto não disponível'}`);
+            throw new CustomError(availability.reason || 'Produto não disponível', 400);
+        }
 
-        // Criar rental no banco
+        // Calculate rental price
+        const calculation = await this.calculateRentalPrice(
+            rentalData.productId,
+            rentalData.reservations,
+            rentalData.chargingType,
+            userId
+        );
+
+        // Prepare rentalDates for Prisma create
+        const rentalDatesToCreate = rentalData.reservations.flatMap(reservation => {
+            if (rentalData.chargingType === chargingModel.POR_DIA) {
+                return { date: new Date(reservation.date) };
+            } else { // POR_HORA
+                return reservation.hours.map(hour => ({
+                    date: new Date(reservation.date),
+                    hour: hour
+                }));
+            }
+        });
+
+        // Create rental in the database
         const rental = await RentsRepository.createRental({
             userId,
             productId: rentalData.productId,
@@ -52,102 +68,18 @@ class RentalService {
             totalAmount: calculation.totalAmount,
             status: 'PENDING',
             rentalDates: {
-                create: rentalData.selectedTimes.map(slot => ({
-                    date: new Date(slot.date),
-                    startTime: new Date(`${slot.date}T${slot.startTime}:00`),
-                    endTime: new Date(`${slot.date}T${slot.endTime}:00`)
-                }))
+                create: rentalDatesToCreate
             }
         });
 
         return {
             id: rental.id,
             status: rental.status,
-            dates: rental.rentalDates.map(d => ({ date: d.date, startTime: d.startTime, endTime: d.endTime })),
+            dates: rental.rentalDates.map(d => ({ date: d.date, hour: d.hour })),
             description: rental.description,
             activityTitle: rental.activityTitle,
             activityDescription: rental.activityDescription,
             pricing: calculation,
-            product: {
-                productId: rental.product.id,
-                productTitle: rental.product.title,
-                productType: rental.product.type,
-                productCategory: rental.product.category,
-                productImage: rental.product.imagesUrls,
-                productDiscount: rental.product.discountPercentage,
-                spaceProduct: rental.product.spaceProduct ?? undefined,
-                equipmentProduct: rental.product.equipamentProduct ?? undefined,
-                serviceProduct: rental.product.servicesProduct ?? undefined,
-            },
-            companyThatOwnsProduct: {
-                id: company.id,
-                name: company.popularName,
-                email: company.email,
-                associateDiscountRate: company.associateDiscountRate
-            },
-            client: {
-                userId: rental.user.userId,
-                name: rental.user.name,
-                email: rental.user.email,
-                phone: rental.user.phoneNumber
-            }
-        };
-    }
-
-    async createRentalRequestByDay(userId: string, rentalData: RentalCreateInput) { 
-        logger.info(`Creating daily rental request for userId: ${userId}`);
-
-        const company = await productRepository.findProductCompany(rentalData.productId);
-        if (!company.id) {
-            logger.error(`Product not found for productId: ${rentalData.productId}`);
-            throw new CustomError("Produto não encontrado", 404);
-        }
-
-        const availability = await this.checkProductAvailabilityForDays(rentalData.productId, rentalData.selectedDates.map(date => new Date(date)));
-        if (!availability.available) {
-            logger.error(`Rental request failed: ${availability.reason || 'Produto não disponível'}`);
-            throw new CustomError(availability.reason || 'Produto não disponível', 400);
-        }
-
-        const calculation = await this.calculateRentalPriceByDays(
-            rentalData.productId,
-            rentalData.selectedDates.map(date => new Date(date)),
-            rentalData.chargingType as chargingModel,
-            userId
-        );
-
-        const rental = await RentsRepository.createRental({
-            userId: userId,
-            productId: rentalData.productId,
-            description: rentalData.description,
-            activityTitle: rentalData.activityTitle,
-            activityDescription: rentalData.activityDescription,
-            discountApplied: calculation.discountAmount,
-            chargingType: rentalData.chargingType,
-            totalAmount: calculation.totalAmount,
-            status: 'PENDING',
-            rentalDates: {
-                create: rentalData.selectedDates.map((date: string) => ({
-                    date: new Date(date)
-                }))
-            }
-        });
-
-        return {
-            id: rental.id,
-            status: rental.status,
-            dates: rental.rentalDates.map(d => d.date),
-            description: rental.description,
-            activityTitle: rental.activityTitle,
-            activityDescription: rental.activityDescription,
-            pricing: {
-                baseAmount: calculation.baseAmount,
-                discountAmount: calculation.discountAmount,
-                chargingType: calculation.chargingType,
-                period: calculation.period,
-                pricePerUnit: calculation.pricePerUnit,
-                totalAmount: calculation.totalAmount
-            },
             product: {
                 productId: rental.product.id,
                 productTitle: rental.product.title,
@@ -269,46 +201,81 @@ class RentalService {
         };
     }
     
-    async checkProductAvailabilityForDays(productId: string, dates: Date[]) {
-        logger.info("Checking availability for specific days");
+    private async checkProductAvailability(productId: string, reservations: RentalCreateInput['reservations'], chargingType: chargingModel) {
+        logger.info("Checking availability for reservations");
 
-        for (const date of dates) {
-            const conflicting = await RentsRepository.findRentsById(productId, date);
-            if (conflicting.length > 0) {
-                logger.info("Product not available due to conflicting rentals");
-                return {
-                    available: false,
-                    reason: 'Produto já está reservado para este período',
-                    conflictingRentals: conflicting.map(rental => ({
-                        id: rental.rent.id,
-                        status: rental.rent.status
-                    }))
-                };
-            }
+        for (const reservation of reservations) {
+            const date = new Date(reservation.date);
+            if (chargingType === chargingModel.POR_DIA) {
+                const conflicting = await RentsRepository.findRentsById(productId, date);
+                if (conflicting.length > 0) {
+                    logger.info("Product not available due to conflicting rentals (POR_DIA)");
+                    return {
+                        available: false,
+                        reason: `Produto já está reservado para ${reservation.date}`,
+                        conflictingRentals: conflicting.map(rental => ({
+                            id: rental.rent.id,
+                            status: rental.rent.status
+                        }))
+                    };
+                }
 
-            const specificAvailability = await productRepository.specificAvailability(productId, date, date);
-            if (specificAvailability) {
-                logger.info("Product not available due to specific availability settings");
-                return {
-                    available: false,
-                    reason: 'Produto bloqueado para este período'
-                };
-            }
+                const specificAvailability = await productRepository.specificAvailability(productId, date, date);
+                if (specificAvailability) {
+                    logger.info("Product not available due to specific availability settings (POR_DIA)");
+                    return {
+                        available: false,
+                        reason: `Produto bloqueado para ${reservation.date}`
+                    };
+                }
 
-            const weeklyAvailabilityCheck = await this.checkWeeklyAvailability(productId, date, date);
-            if (!weeklyAvailabilityCheck.available) {
-                return {
-                    available: false,
-                    reason: `Produto não disponível em ${date.toISOString().split("T")[0]}`
-                };
+                const weeklyAvailabilityCheck = await this.checkWeeklyAvailability(productId, date, date);
+                if (!weeklyAvailabilityCheck.available) {
+                    return {
+                        available: false,
+                        reason: `Produto não disponível em ${reservation.date} (${weeklyAvailabilityCheck.reason})`
+                    };
+                }
+            } else { // POR_HORA
+                for (const hour of reservation.hours) {
+                    const conflicting = await RentsRepository.findRentsByIdAndHour(productId, date, hour);
+                    if (conflicting.length > 0) {
+                        logger.info(`Product not available due to conflicting rentals (POR_HORA) for ${reservation.date} at ${hour}`);
+                        return {
+                            available: false,
+                            reason: `Produto já reservado para ${reservation.date} às ${hour}`,
+                            conflictingRentals: conflicting.map(rental => ({
+                                id: rental.rent.id,
+                                status: rental.rent.status
+                            }))
+                        };
+                    }
+
+                    const specificAvailability = await productRepository.specificAvailability(productId, date, date);
+                    if (specificAvailability) {
+                        logger.info("Product not available due to specific availability settings (POR_HORA)");
+                        return {
+                            available: false,
+                            reason: `Produto bloqueado para ${reservation.date} às ${hour}`
+                        };
+                    }
+
+                    const weeklyAvailabilityCheck = await this.checkWeeklyAvailability(productId, date, date, hour);
+                    if (!weeklyAvailabilityCheck.available) {
+                        return {
+                            available: false,
+                            reason: `Produto não disponível em ${reservation.date} às ${hour} (${weeklyAvailabilityCheck.reason})`
+                        };
+                    }
+                }
             }
         }
 
         return { available: true };
     }
 
-    async calculateRentalPriceByDays(productId: string, dates: Date[], chargingType: chargingModel, userId: string) {
-        logger.info(`Calculating rental price for productId: ${productId}, selectedDates: ${dates}, chargingType: ${chargingType}, userId: ${userId}`);
+    private async calculateRentalPrice(productId: string, reservations: RentalCreateInput['reservations'], chargingType: chargingModel, userId: string) {
+        logger.info(`Calculating rental price for productId: ${productId}, chargingType: ${chargingType}, userId: ${userId}`);
 
         const product = await productServices.findProductById(productId);
         if (product.chargingModel !== chargingModel.AMBOS && product.chargingModel !== chargingType) {
@@ -318,16 +285,26 @@ class RentalService {
 
         let baseAmount = 0;
         let pricePerUnit = 0;
+        let totalUnits = 0;
 
-        if (chargingType === chargingModel.POR_DIA || chargingType === chargingModel.AMBOS) {
+        if (chargingType === chargingModel.POR_DIA) {
             if (!product.dailyPrice) {
                 logger.error(`Daily price not set for productId: ${productId}`);
                 throw new CustomError("Daily price not set for this product", 400);
             }
-
             pricePerUnit = Number(product.dailyPrice);
-            baseAmount = dates.length * pricePerUnit;
-
+            totalUnits = reservations.length; // Each reservation object represents a day
+            baseAmount = totalUnits * pricePerUnit;
+        } else { // POR_HORA
+            if (!product.hourlyPrice) {
+                logger.error(`Hourly price not set for productId: ${productId}`);
+                throw new CustomError("Hourly price not set for this product", 400);
+            }
+            pricePerUnit = Number(product.hourlyPrice);
+            for (const reservation of reservations) {
+                totalUnits += reservation.hours.length; // Each hour in the array is a unit
+            }
+            baseAmount = totalUnits * pricePerUnit;
         }
 
         let discountAmount = 0;
@@ -336,7 +313,7 @@ class RentalService {
         const associate = await userRepository.findUserAssociateToCompany(userId, product.ownerId);
         if (associate) {
             discountAmount = baseAmount * (Number(product.discountPercentage) / 100);
-            totalAmount = baseAmount - discountAmount; 
+            totalAmount = baseAmount - discountAmount;
         }
 
         logger.info(`Price calculation: baseAmount=${baseAmount}, discountAmount=${discountAmount}, totalAmount=${totalAmount}`);
@@ -345,55 +322,21 @@ class RentalService {
             baseAmount,
             discountAmount,
             chargingType,
-            period: { days: dates.length },
+            period: chargingType === chargingModel.POR_DIA ? { days: totalUnits } : { hours: totalUnits },
             pricePerUnit,
             totalAmount
         };
     }
 
-    private async calculateRentalPriceByHour(productId: string, selectedTimes: HourSlot[], userId: string) {
-        const product = await productServices.findProductById(productId);
-        if (!product.hourlyPrice) {
-            throw new CustomError("Preço por hora não definido para este produto", 400);
-        }
-
-        let baseAmount = 0;
-        selectedTimes.forEach(slot => {
-            const start = new Date(`${slot.date}T${slot.startTime}:00`);
-            const end = new Date(`${slot.date}T${slot.endTime}:00`);
-            const durationHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-            baseAmount += durationHours * Number(product.hourlyPrice);
-        });
-
-        let discountAmount = 0;
-        let totalAmount = baseAmount;
-
-        const associate = await userRepository.findUserAssociateToCompany(userId, product.ownerId);
-        if (associate) {
-            discountAmount = baseAmount * (Number(product.discountPercentage) / 100);
-            totalAmount = baseAmount - discountAmount; 
-        }
-
-        return {
-            baseAmount,
-            discountAmount,
-            totalAmount,
-            chargingType: chargingModel.POR_HORA,
-            period: { hours: baseAmount / Number(product.hourlyPrice) },
-            pricePerUnit: Number(product.hourlyPrice)
-        };
-    }
-
-    private async checkWeeklyAvailability(productId: string, startDate: Date, endDate: Date) {
+    private async checkWeeklyAvailability(productId: string, startDate: Date, endDate: Date, hour?: string) {
         logger.info("Checking WeeklyAvailability");
 
         const weeklyAvailabilities = await productRepository.findProductWeeklyAvailability(productId);
 
         if (weeklyAvailabilities.length === 0) {
-            return { available: true }; 
+            return { available: true };
         }
 
-        // Verificar cada dia do período
         const currentDate = new Date(startDate);
         while (currentDate <= endDate) {
             const dayOfWeek = currentDate.getDay();
@@ -406,16 +349,34 @@ class RentalService {
                 };
             }
 
+            if (hour) {
+                // For hourly rentals, check if the specific hour is within the available range
+                const [startH, startM] = availability.startTime.split(':').map(Number);
+                const [endH, endM] = availability.endTime.split(':').map(Number);
+                const [reqH, reqM] = hour.split(':').map(Number);
+
+                const startMinutes = startH * 60 + startM;
+                const endMinutes = endH * 60 + endM;
+                const reqMinutes = reqH * 60 + reqM;
+
+                if (reqMinutes < startMinutes || reqMinutes >= endMinutes) {
+                    return {
+                        available: false,
+                        reason: `Hora ${hour} fora do horário de funcionamento (${availability.startTime}-${availability.endTime}) em ${this.getDayName(dayOfWeek)}`
+                    };
+                }
+            }
+
             currentDate.setDate(currentDate.getDate() + 1);
         }
 
         return { available: true };
     }
-    
+
     private getDayName(dayOfWeek: number): string {
         const days = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
         return days[dayOfWeek];
-  }
+    }
 
 }
 
