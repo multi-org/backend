@@ -44,7 +44,9 @@ export const allAdminPermissions = [
 
   // questões
   'answer:question',
-  'delete:question'
+  'delete:question',
+
+  'get_all:rents'
 ];
 
 const excludeFromAdminCompany = ['create:company', 'answer:question'];

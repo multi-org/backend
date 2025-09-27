@@ -98,7 +98,8 @@ class Rents {
             include: {
                 product: true,
                 payment: true,
-                rentalDates: true
+                rentalDates: true,
+                user: true
             },
             orderBy: {
                 createdAt: 'desc'
@@ -120,6 +121,20 @@ class Rents {
             where: { id: rentId },
             data: { status },
             select: { id: true, status: true, userId: true, productId: true, activityTitle: true, rentalDates: true }
+        });
+    }
+
+    async findAllRentals() {
+        return await prisma.rent.findMany({
+            include: {
+                product: true,
+                payment: true,
+                rentalDates: true,
+                user: true
+            },
+            orderBy: {
+                createdAt: 'desc'
+            }
         });
     }
 }
