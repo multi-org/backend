@@ -37,7 +37,6 @@ class RentalService {
             throw new CustomError(availability.reason || 'Produto não disponível', 400);
         }
 
-        // Calculate rental price
         const calculation = await this.calculateRentalPrice(
             rentalData.productId,
             rentalData.reservations,
@@ -45,7 +44,6 @@ class RentalService {
             userId
         );
 
-        // Prepare rentalDates for Prisma create
         const rentalDatesToCreate = rentalData.reservations.flatMap(reservation => {
             if (rentalData.chargingType === chargingModel.POR_DIA) {
                 return { date: new Date(reservation.date) };
@@ -57,7 +55,6 @@ class RentalService {
             }
         });
 
-        // Create rental in the database
         const rental = await RentsRepository.createRental({
             userId,
             productId: rentalData.productId,
@@ -125,8 +122,8 @@ class RentalService {
 
                 return {
                     id: rental.id,
-                    dates: rental.rentalDates.map(d => d.date),
-                    
+                    dates: rental.rentalDates.map(d => ({ date: d.date, hour: d.hour })),
+
                     description: rental.description,
                     activityTitle: rental.activityTitle,
                     activityDescription: rental.activityDescription,
@@ -149,8 +146,24 @@ class RentalService {
                         id: company.id,
                         name: company.popularName,
                         email: company.email,
-                        associateDiscountRate: company.associateDiscountRate
+                        phone: company.phone,
+                        associateDiscountRate: company.associateDiscountRate,
+                        Address: {
+                            street: company.address?.street,
+                            city: company.address?.city,
+                            state: company.address?.state,
+                            zipCode: company.address?.zipCode,
+                            country: company.address?.country,
+                            number: company.address?.number,
+                            complement: company.address?.complement,
+                        }
                     },
+                    client: {
+                        userId: rental.user.userId,
+                        name: rental.user.name,
+                        email: rental.user.email,
+                        phone: rental.user.phoneNumber
+                    }
                 }
             }))
                 
@@ -201,6 +214,82 @@ class RentalService {
             status: updatedRental.status,
         };
     }
+
+        async getAllRentals() {
+        logger.info("Fetching all rentals");
+
+        const rentals = await RentsRepository.findAllRentals();
+        if (!rentals) {
+            logger.error("No rentals found");
+            throw new CustomError("Nenhum aluguel encontrado", 404);
+        }
+
+        logger.info(`Found ${rentals.length} rentals`);
+
+        return {
+            rentals: await Promise.all(rentals.map(async rental => {
+                const company = await productRepository.findProductCompany(rental.productId);
+
+                return {
+                    id: rental.id,
+                    dates: rental.rentalDates.map(d => ({ date: d.date, hour: d.hour })),
+                    
+                    description: rental.description,
+                    activityTitle: rental.activityTitle,
+                    activityDescription: rental.activityDescription,
+                    pricing: {
+                        baseAmount: rental.payment?.amount || 0,
+                        discountAmount: rental.discountApplied,
+                        chargingType: rental.chargingType,
+                        totalAmount: rental.totalAmount
+                    },
+                    status: rental.status,
+                    product: {
+                        productId: rental.product.id,
+                        productTitle: rental.product.title,
+                        productType: rental.product.type,
+                        productCategory: rental.product.category,
+                        productImage: rental.product.imagesUrls,
+                        productDiscount: rental.product.discountPercentage,
+                    },
+                    companyThatOwnsProduct: {
+                        id: company.id,
+                        name: company.popularName,
+                        email: company.email,
+                        phone: company.phone,
+                        associateDiscountRate: company.associateDiscountRate,
+                        Address: {
+                            street: company.address?.street,
+                            city: company.address?.city,
+                            state: company.address?.state,
+                            zipCode: company.address?.zipCode,
+                            country: company.address?.country,
+                            number: company.address?.number,
+                            complement: company.address?.complement,
+                        }
+                    },
+                    client: {
+                        userId: rental.user.userId,
+                        name: rental.user.name,
+                        email: rental.user.email,
+                        phone: rental.user.phoneNumber
+                    }
+                }
+            }))
+                
+        };
+    }
+    
+    async getRentalById(rentId: string) {
+        logger.info(`Fetching rental with rentId: ${rentId}`);
+        
+        const rental = await RentsRepository.findRentalById(rentId);
+        if (!rental) {
+            throw new Error("Rental not found");
+        }
+
+        return {...rental, data: rental.rentalDates.map(d => ({ date: d.date, hour: d.hour })),};
+    }
     
     private async checkProductAvailability(productId: string, reservations: RentalCreateInput['reservations'], chargingType: chargingModel) {
         logger.info("Checking availability for reservations");
@@ -237,7 +326,7 @@ class RentalService {
                         reason: `Produto não disponível em ${reservation.date} (${weeklyAvailabilityCheck.reason})`
                     };
                 }
-            } else { // POR_HORA
+            } else { 
                 for (const hour of reservation.hours) {
                     const conflicting = await RentsRepository.findRentsByIdAndHour(productId, date, hour);
                     if (conflicting.length > 0) {

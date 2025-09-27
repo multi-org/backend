@@ -78,99 +78,41 @@ export class RentalController {
     }
   }
 
-  // /**
-  //  * Obtém detalhes de um aluguel específico
-  //  * GET /rentals/:id
-  //  */
-  // async getRentalById(req: AuthRequest, res: Response) {
-  //   try {
-  //     const { id: rentalId } = req.params;
-  //     const userId = req.userId;
+  async getRentalById(req: AuthRequest, res: Response) {
+    try {
+      const { rentalId } = req.params;
 
-  //     if (!userId) {
-  //       return res.status(401).json({ error: 'Usuário não autenticado' });
-  //     }
+      if (!rentalId) {
+        return res.status(401).json({ error: 'Usuário não autenticado' });
+      }
 
-  //     const rentals = await rentalService.getUserRentals(userId);
-  //     const rental = rentals.find(r => r.id === rentalId);
+      const rental = await rentalServices.getRentalById(rentalId);
+      res.json({ success: true, data: rental });
+    } catch (error) {
+      console.error('Erro ao obter aluguel:', error);
+      res.status(500).json({
+        error: 'Erro interno do servidor'
+      });
+    }
+  }
 
-  //     if (!rental) {
-  //       return res.status(404).json({ error: 'Aluguel não encontrado' });
-  //     }
+  async getAllRentals(req: AuthRequest, res: Response) {
+    try {
+      const rentals = await rentalServices.getAllRentals();
 
-  //     res.json({
-  //       success: true,
-  //       data: {
-  //         id: rental.id,
-  //         userId: rental.userId,
-  //         productId: rental.productId,
-  //         startDate: rental.startDate,
-  //         endDate: rental.endDate,
-  //         totalAmount: rental.totalAmount,
-  //         discountApplied: rental.discountApplied,
-  //         status: rental.status,
-  //         description: rental.description,
-  //         activityTitle: rental.activityTitle,
-  //         activityDescription: rental.activityDescription,
-  //         chargingType: rental.chargingType,
-  //         createdAt: rental.createdAt,
-  //         updatedAt: rental.updatedAt,
-  //         product: rental.product,
-  //         payment: rental.payment
-  //       }
-  //     });
-  //   } catch (error) {
-  //     console.error('Erro ao obter aluguel:', error);
-  //     res.status(500).json({
-  //       error: 'Erro interno do servidor'
-  //     });
-  //   }
-  // }
-
-  // /**
-  //  * Cancela um aluguel
-  //  * POST /rentals/:id/cancel
-  //  */
-  // async cancelRental(req: AuthRequest, res: Response) {
-  //   try {
-  //     const { id: rentalId } = req.params;
-  //     const { reason } = req.body;
-  //     const userId = req.userId;
-
-  //     if (!userId) {
-  //       return res.status(401).json({ error: 'Usuário não autenticado' });
-  //     }
-
-  //     const rental = await rentalService.cancelRental(rentalId, userId, reason);
-
-  //     res.json({
-  //       success: true,
-  //       data: {
-  //         id: rental.id,
-  //         userId: rental.userId,
-  //         productId: rental.productId,
-  //         startDate: rental.startDate,
-  //         endDate: rental.endDate,
-  //         totalAmount: rental.totalAmount,
-  //         discountApplied: rental.discountApplied,
-  //         status: rental.status,
-  //         description: rental.description,
-  //         activityTitle: rental.activityTitle,
-  //         activityDescription: rental.activityDescription,
-  //         chargingType: rental.chargingType,
-  //         createdAt: rental.createdAt,
-  //         updatedAt: rental.updatedAt,
-  //         product: rental.product,
-  //         user: rental.user
-  //       }
-  //     });
-  //   } catch (error) {
-  //     console.error('Erro ao cancelar aluguel:', error);
-  //     res.status(400).json({
-  //       error: error instanceof Error ? error.message : 'Erro interno do servidor'
-  //     });
-  //   }
-  // }
+      res.json({
+        success: true,
+        rentals
+      });
+      
+    } catch (error: any) {
+      const statusCode = error.status || 500;
+      return res.status(statusCode).json({
+        success: false,
+        message: error.message || "Erro interno do servidor",
+      });
+    }
+  }
 }
 
 export default new RentalController();
