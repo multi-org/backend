@@ -112,7 +112,12 @@ class Rents {
     async findRentalById(rentId: string) {
         return await prisma.rent.findUnique({
             where: { id: rentId },
-            select: { id: true, status: true, userId: true, productId: true, activityTitle: true, rentalDates: true }
+            include: {
+                product: true,
+                payment: true,
+                rentalDates: true,
+                user: true
+            }
         });
     }
 
