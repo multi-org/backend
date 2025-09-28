@@ -94,6 +94,7 @@ class RentalService {
                 name: company.popularName,
                 email: company.email,
                 associateDiscountRate: company.associateDiscountRate,
+                phone: company.phone,
                 Address: {
                     street: company.address?.street,
                     city: company.address?.city,
