@@ -93,7 +93,17 @@ class RentalService {
                 id: company.id,
                 name: company.popularName,
                 email: company.email,
-                associateDiscountRate: company.associateDiscountRate
+                associateDiscountRate: company.associateDiscountRate,
+                Address: {
+                    street: company.address?.street,
+                    city: company.address?.city,
+                    state: company.address?.state,
+                    zipCode: company.address?.zipCode,
+                    country: company.address?.country,
+                    number: company.address?.number,
+                    complement: company.address?.complement,
+                    neighborhood: company.address?.neighborhood,
+                }
             },
             client: {
                 userId: rental.user.userId,
@@ -156,6 +166,7 @@ class RentalService {
                             country: company.address?.country,
                             number: company.address?.number,
                             complement: company.address?.complement,
+                            neighborhood: company.address?.neighborhood,
                         }
                     },
                     client: {
@@ -266,6 +277,7 @@ class RentalService {
                             country: company.address?.country,
                             number: company.address?.number,
                             complement: company.address?.complement,
+                            neighborhood: company.address?.neighborhood,
                         }
                     },
                     client: {
@@ -288,9 +300,60 @@ class RentalService {
             throw new Error("Rental not found");
         }
 
-        return {...rental, data: rental.rentalDates.map(d => ({ date: d.date, hour: d.hour })),};
-    }
-    
+        const company = await productRepository.findProductCompany(rental.productId);
+        if (!company.id) {
+            logger.error(`Product not found for productId: ${rental.productId}`);
+            throw new CustomError("Produto não encontrado", 404);
+        }
+
+        return {
+            id: rental.id,
+            dates: rental.rentalDates.map(d => ({ date: d.date, hour: d.hour })),
+            
+            description: rental.description,
+            activityTitle: rental.activityTitle,
+            activityDescription: rental.activityDescription,
+            pricing: {
+                baseAmount: rental.payment?.amount || 0,
+                discountAmount: rental.discountApplied,
+                chargingType: rental.chargingType,
+                totalAmount: rental.totalAmount
+            },
+            status: rental.status,
+            product: {
+                productId: rental.product.id,
+                productTitle: rental.product.title,
+                productType: rental.product.type,
+                productCategory: rental.product.category,
+                productImage: rental.product.imagesUrls,
+                productDiscount: rental.product.discountPercentage,
+            },
+            companyThatOwnsProduct: {
+                id: company.id,
+                name: company.popularName,
+                email: company.email,
+                phone: company.phone,
+                associateDiscountRate: company.associateDiscountRate,
+                Address: {
+                    street: company.address?.street,
+                    city: company.address?.city,
+                    state: company.address?.state,
+                    zipCode: company.address?.zipCode,
+                    country: company.address?.country,
+                    number: company.address?.number,
+                    complement: company.address?.complement,
+                    neighborhood: company.address?.neighborhood,
+                }
+            },
+            client: {
+                userId: rental.user.userId,
+                name: rental.user.name,
+                email: rental.user.email,
+                phone: rental.user.phoneNumber
+            }
+        }
+    };
+
     private async checkProductAvailability(productId: string, reservations: RentalCreateInput['reservations'], chargingType: chargingModel) {
         logger.info("Checking availability for reservations");
 
