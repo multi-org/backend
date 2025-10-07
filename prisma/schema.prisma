@@ -348,18 +348,30 @@ model Rent {
   description     String?       @db.VarChar(1000)
   activityTitle   String        @db.VarChar(255) // Título da atividade
   activityDescription String?   @db.VarChar(1000) // Descrição da atividade
-  startDate       DateTime      @db.Date
-  endDate         DateTime      @db.Date
   totalAmount     Decimal       @db.Decimal(10, 2) 
   discountApplied Decimal       @db.Decimal(10, 2) @default(0.0)
   status          RentStatus    @default(PENDING) 
   chargingType    chargingModel @default(POR_DIA) // Tipo de cobrança usado neste aluguel
+
+  rentalDates RentalDate[]
   
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt 
 
 
   @@map("rents") 
+  @@schema("multi")
+}
+
+model RentalDate {
+  id        String   @id @default(uuid()) @db.Uuid
+  date      DateTime @db.Date
+  hour      String?  @db.VarChar(5)
+  rentId    String   @db.Uuid
+  rent      Rent     @relation(fields: [rentId], references: [id], onDelete: Cascade)
+
+  @@unique([rentId, date, hour])
+  @@map("rental_dates")
   @@schema("multi")
 }
 

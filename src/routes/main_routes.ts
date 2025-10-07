@@ -4,11 +4,13 @@ import enterpriseRoutes from "./enterprise_routes";
 import productRoutes from "./products_routes"
 import availabilityRoutes from './availability_routes';
 import questionsFrequentlyRoutes from './questionsFrequently_routes';
+import rentalRoutes from './rental_routes';
 
 const router = Router();
 
 router.use("/users", userRoutes);
 router.use("/companies", enterpriseRoutes);
+router.use("/rentals", rentalRoutes);
 router.use("/availability", availabilityRoutes);
 router.use("/faqs", questionsFrequentlyRoutes);
 router.use("/products", productRoutes);

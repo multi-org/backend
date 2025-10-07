@@ -41,9 +41,15 @@ export const allAdminPermissions = [
   'readAll:company',
   'reject:request_company',
   'accept:request_company',
+
+  // questões
+  'answer:question',
+  'delete:question',
+
+  'get_all:rents'
 ];
 
-const excludeFromAdminCompany = ['create:company'];
+const excludeFromAdminCompany = ['create:company', 'answer:question'];
 
 export const permissions = {
   adminSystemUser: allAdminPermissions,
