@@ -59,7 +59,7 @@ export const permissions = {
     'rent:rent_space',
     'cancel:rent_product',
     'cancel:rent_space',
-    'request_registration:company',
+    'request:registration_company',
     'request_registration:company_associate'
   ]
 } as const;
