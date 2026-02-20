@@ -6,8 +6,6 @@ import { connectDatabase } from "./config/postgreConnect";
 import { connectRedis } from "./config/redis";
 import mainRouter from "./routes/main_routes";
 
-import '@app/jobs/init';
-
 const app = express();
 
 // CORS
@@ -28,8 +26,8 @@ app.get("/healthz", (req, res) => res.status(200).json({ status: "ok" }));
 // rotas
 app.use(mainRouter);
 
-// Conexões DB/Redis
-connectDatabase();
-connectRedis();
+// Conexões DB/Redis (agora será feito no server.ts após o servidor iniciar)
+// connectDatabase();
+// connectRedis();
 
 export default app;
