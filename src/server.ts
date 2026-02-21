@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 8083;
 const HOST = process.env.HOST || '0.0.0.0';
 
 // Iniciar o servidor primeiro
-app.listen(HOST, async () => {
+app.listen(Number(PORT), HOST, async () => {
   console.log(`✅ Servidor rodando no link http://localhost:${PORT}/`);
   console.log(`Link da documentação: http://localhost:${PORT}/api-docs`);
 
@@ -16,7 +16,7 @@ app.listen(HOST, async () => {
     await connectRedis();
     
     // Importar jobs após conexões estabelecidas
-    await import('@app/jobs/init');
+    await import('@app/jobs/lib/worker');
   } catch (error) {
     console.error('Error connecting to services:', error);
   }

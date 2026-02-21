@@ -1,10 +1,17 @@
-import { resend } from '@app/utils/emailConfig';
+import { transporter } from '@app/utils/emailConfig';
 import codeHtml from '@app/templates/code_template';
 import inviteTemplate from '@app/templates/inviteManagerTemplate';
 import rentalTemplates from '@app/templates/message_rental_templates';
 
 import { logger, CustomError } from '@app/utils/logger';
 
+const mailOptionsCode = (email: string, code: string) => {  
+    const subject = 'Verification Code';
+    const text = `Your verification code is: ${code}`;
+    const html = codeHtml(code);
+
+    return {to: email, subject, text, html};
+};
 
 const mailOptionsCompany = (email: string, companyName: string, invitedBy: string, enterpriseName: string, inviteLink: string) => {
     const subject = `Convite para administrar a empresa ${companyName}`;
@@ -24,20 +31,11 @@ const mailOptionsRental = (email: string, reponseAdmin: string, productTitle: st
 
 export const verificationCodeEmail = {
     key: 'sendVerificationCode',
-
     async handle({ data }: { data: { email: string, code: string } }) {
         const { email, code } = data;
-
         try {
-            await resend.emails.send({
-                from: "uepb.multi@gmail.com",
-                to: email,
-                subject: "Código de Verificação",
-                html: codeHtml(code)
-            });
-
-            logger.info(`Verification code sent successfully to ${email}`);
-            return { success: true };
+            await transporter.sendMail(mailOptionsCode(email, code));
+            logger.info(`Verification code sent suceccessfully`);
         } catch (error) {
             logger.error('Error sending verification code to email:', error);
             throw new CustomError('Error sending verification code to email', 500);
@@ -47,7 +45,6 @@ export const verificationCodeEmail = {
 
 export const welcomeEmail = {
     key: 'WelcomeEmail',
-
     async handle({data}: {data: {email:string, name: string}}) {
         try {
             // Implementação do envio de email de boas-vindas
@@ -62,22 +59,12 @@ export const welcomeEmail = {
 
 export const inviteEnterpriseAdminEmail = {
     key: 'inviteEnterpriseAdminEmail',
-
-    async handle({ data }: {
-        data: { email: string, nameAdmin: string, enterpriseName: string, inviteLink: string }
-    }) {
+    async handle({ data }: { data: { email: string, nameAdmin: string, enterpriseName: string, inviteLink: string } }) {
         const { email, nameAdmin: invitedBy, enterpriseName, inviteLink } = data;
 
-        try {            
-            await resend.emails.send({
-                from: 'onboarding@resend.dev',
-                to: email,
-                subject: `Convite para administrar a empresa ${enterpriseName}`,
-                html: inviteTemplate(inviteLink, enterpriseName, invitedBy),
-            });
-
+        try {
+            await transporter.sendMail(mailOptionsCompany(email, enterpriseName, invitedBy, enterpriseName, inviteLink));
             logger.info(`Invite email sent successfully to ${email}`);
-            return { success: true };
         } catch (error) {
             logger.error('Error sending invite email:', error);
             throw new CustomError('Error sending invite email', 500);
@@ -87,28 +74,11 @@ export const inviteEnterpriseAdminEmail = {
 
 export const confirmableRental = {
     key: 'confirmableRental',
-
-    async handle({ data }: {
-        data: {
-            email: string,
-            rentalName: string,
-            productTitle: string,
-            startDate: Date,
-            endDate: Date,
-            response: string,
-            userName: string
-        }
-    }) {
+    async handle({ data }: { data: { email: string, rentalName: string, productTitle: string, startDate: Date, endDate: Date, response: string, userName: string } }) {
         const { email, rentalName, productTitle, startDate, endDate, response, userName } = data;
 
         try {
-          await resend.emails.send({
-            from: 'onboarding@resend.dev',
-            to: email,
-            subject: `Confirmação de Aluguel: ${productTitle}`,
-            html: rentalTemplates(userName, rentalName, productTitle, response),
-          });
-            
+          await transporter.sendMail(mailOptionsRental(email, response, productTitle, startDate, endDate, userName, rentalName));
             return { success: true };
         } catch (error) {
             logger.error('Error sending confirmable rental email:', error);

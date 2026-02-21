@@ -6,7 +6,6 @@ Queue.process();
 
 process.on('SIGTERM', async () => {
     logger.info('Worker shutting down...');
-    // Código para encerramento gracioso das filas
     process.exit(0);
 });
 

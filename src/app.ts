@@ -1,9 +1,6 @@
 import express from "express";
 import cookieParser from "cookie-parser";
 import cors from "cors";
-
-import { connectDatabase } from "./config/postgreConnect";
-import { connectRedis } from "./config/redis";
 import mainRouter from "./routes/main_routes";
 
 const app = express();
