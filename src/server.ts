@@ -10,8 +10,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 app.listen(HOST, async () => {
   console.log(`✅ Servidor rodando no link http://localhost:${PORT}/`);
   console.log(`Link da documentação: http://localhost:${PORT}/api-docs`);
-  
-  // Conectar aos serviços após o servidor estar rodando
+
   try {
     await connectDatabase();
     await connectRedis();
