@@ -22,13 +22,21 @@ app.use(cors(corsOptions));
 app.use(express.json());
 app.use(cookieParser());
 
-// health check
 app.get("/healthz", (req, res) => res.status(200).json({ status: "ok" }));
 
-// rotas
 app.use(mainRouter);
 
-// Conexões DB/Redis
+// Middleware de erro global
+app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  console.error("❌ Erro não tratado:", err);
+  
+  res.status(err.status || 500).json({
+    error: process.env.NODE_ENV === "production" 
+      ? "Erro interno do servidor" 
+      : err.message,
+  });
+});
+
 connectDatabase();
 connectRedis();
 
