@@ -25,7 +25,8 @@ class userController {
             res.cookie('verification_token', verificationToken, {
                 httpOnly: true,
                 maxAge: 60 * 60 * 1000, // 1 hora
-                secure: process.env.NODE_ENV === 'production',
+                //secure: process.env.NODE_ENV === 'production',
+                secure: true,
                 sameSite: 'lax',
                 path: '/'
             });
@@ -60,7 +61,8 @@ class userController {
             res.cookie('user_creation_token', userCreationToken, {
                 httpOnly: true,
                 maxAge: 60 * 60 * 1000, // 1 hora
-                secure: process.env.NODE_ENV === 'production',  
+                // secure: process.env.NODE_ENV === 'production',  
+                secure: true,
                 sameSite: 'lax',
                 path: '/'
             });
@@ -109,7 +111,8 @@ class userController {
             res.cookie("token", user.token, {
                 httpOnly: true,
                 maxAge: 6 * 60 * 60 * 1000, // 6 horas
-                secure: process.env.NODE_ENV === 'production',
+                //secure: process.env.NODE_ENV === 'production',
+                secure: true,
                 sameSite: 'lax',
                 path: '/'
             });
@@ -136,7 +139,8 @@ class userController {
             res.cookie("token", user.token, {
                 httpOnly: true,
                 maxAge: 6 * 60 * 60 * 1000, // 6 horas
-                secure: process.env.NODE_ENV === 'production',
+                //secure: process.env.NODE_ENV === 'production',
+                secure: true,
                 sameSite: 'lax',
                 path: '/'
             })
@@ -348,7 +352,8 @@ class userController {
             res.cookie('password_confirmation_token', passwordToken, {
                 httpOnly: true,
                 maxAge: 5 * 60 * 1000, // 5 minutes
-                secure: process.env.NODE_ENV === 'production',
+                //secure: process.env.NODE_ENV === 'production',
+                secure: true,
                 sameSite: 'lax',
                 path: '/'
             })

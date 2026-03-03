@@ -10,21 +10,28 @@ import '@app/jobs/init';
 
 const app = express();
 
-// CORS
-const corsOptions = {
-  origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:5173"],
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-  credentials: true,
-  optionsSuccessStatus: 204,
-};
+// CORSem produção não usa cors, pois o frontend e backend estão no mesmo domínio
+// const corsOptions = {
+//   origin: process.env.CORS_ORIGIN?.split(",") || ["http://localhost:5173"],
+//   methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+//   credentials: true,
+//   optionsSuccessStatus: 204,
+// };
 
-app.use(cors(corsOptions));
+// app.use(cors(corsOptions));
+if (process.env.NODE_ENV !== "production") { 
+  app.use(cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  }));
+}
+
 app.use(express.json());
 app.use(cookieParser());
 
 app.get("/healthz", (req, res) => res.status(200).json({ status: "ok" }));
 
-app.use(mainRouter);
+app.use("/api", mainRouter);
 
 // Middleware de erro global
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
